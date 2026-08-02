@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthedBienvenueRouteImport } from './routes/_authed/bienvenue'
 import { Route as AuthedFoyerRouteImport } from './routes/_authed/foyer'
 
 const IndexRoute = IndexRouteImport.update({
@@ -28,6 +29,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedBienvenueRoute = AuthedBienvenueRouteImport.update({
+  id: '/bienvenue',
+  path: '/bienvenue',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedFoyerRoute = AuthedFoyerRouteImport.update({
   id: '/foyer',
   path: '/foyer',
@@ -37,11 +43,13 @@ const AuthedFoyerRoute = AuthedFoyerRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/bienvenue': typeof AuthedBienvenueRoute
   '/foyer': typeof AuthedFoyerRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/bienvenue': typeof AuthedBienvenueRoute
   '/foyer': typeof AuthedFoyerRoute
 }
 export interface FileRoutesById {
@@ -49,14 +57,21 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
   '/login': typeof LoginRoute
+  '/_authed/bienvenue': typeof AuthedBienvenueRoute
   '/_authed/foyer': typeof AuthedFoyerRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/foyer'
+  fullPaths: '/' | '/login' | '/bienvenue' | '/foyer'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/foyer'
-  id: '__root__' | '/' | '/_authed' | '/login' | '/_authed/foyer'
+  to: '/' | '/login' | '/bienvenue' | '/foyer'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authed'
+    | '/login'
+    | '/_authed/bienvenue'
+    | '/_authed/foyer'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -88,6 +103,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/bienvenue': {
+      id: '/_authed/bienvenue'
+      path: '/bienvenue'
+      fullPath: '/bienvenue'
+      preLoaderRoute: typeof AuthedBienvenueRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/foyer': {
       id: '/_authed/foyer'
       path: '/foyer'
@@ -99,10 +121,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthedRouteChildren {
+  AuthedBienvenueRoute: typeof AuthedBienvenueRoute
   AuthedFoyerRoute: typeof AuthedFoyerRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedBienvenueRoute: AuthedBienvenueRoute,
   AuthedFoyerRoute: AuthedFoyerRoute,
 }
 
