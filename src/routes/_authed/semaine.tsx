@@ -37,8 +37,17 @@ interface Trip {
   scheduled_at: string
   origin_label: string | null
   destination_label: string | null
+  hub_id: string | null
+  published_to_hub: boolean
+  seats_total: number | null
+  seats_available: number | null
   activities: { label: string } | null
   trip_children: Array<{ child_id: string }>
+}
+
+interface HubOption {
+  id: string
+  name: string
 }
 
 const HOME_LABEL = 'Domicile'
@@ -192,6 +201,7 @@ function SemainePage() {
   const [householdId, setHouseholdId] = useState<string | null>(null)
   const [childrenList, setChildrenList] = useState<Array<ChildOption>>([])
   const [members, setMembers] = useState<Array<Member>>([])
+  const [myHubs, setMyHubs] = useState<Array<HubOption>>([])
   const [trips, setTrips] = useState<Array<Trip>>([])
   const [weekOffset, setWeekOffset] = useState(0)
 
@@ -230,7 +240,7 @@ function SemainePage() {
     const from = fromBrusselsWallClock(weekStart).toISOString()
     const to = fromBrusselsWallClock(weekEnd).toISOString()
 
-    const [childrenResult, membersResult, tripsResult] = await Promise.all([
+    const [childrenResult, membersResult, hubsResult, tripsResult] = await Promise.all([
       supabase
         .from('children')
         .select('id, first_name')
@@ -242,9 +252,14 @@ function SemainePage() {
         .eq('household_id', membership.household_id)
         .order('joined_at'),
       supabase
+        .from('hub_members')
+        .select('hub_id, hubs(id, name)')
+        .eq('user_id', userId)
+        .not('validated_at', 'is', null),
+      supabase
         .from('trips')
         .select(
-          'id, activity_id, direction, status, driver_id, scheduled_at, origin_label, destination_label, activities(label), trip_children(child_id)',
+          'id, activity_id, direction, status, driver_id, scheduled_at, origin_label, destination_label, hub_id, published_to_hub, seats_total, seats_available, activities(label), trip_children(child_id)',
         )
         .eq('household_id', membership.household_id)
         .gte('scheduled_at', from)
@@ -253,11 +268,15 @@ function SemainePage() {
     ])
 
     const firstError =
-      childrenResult.error ?? membersResult.error ?? tripsResult.error
+      childrenResult.error ??
+      membersResult.error ??
+      hubsResult.error ??
+      tripsResult.error
     if (
       firstError ||
       !childrenResult.data ||
       !membersResult.data ||
+      !hubsResult.data ||
       !tripsResult.data
     ) {
       setLoadError(firstError?.message ?? 'Réponse inattendue du serveur')
@@ -268,6 +287,9 @@ function SemainePage() {
     setHouseholdId(membership.household_id)
     setChildrenList(childrenResult.data)
     setMembers(membersResult.data)
+    setMyHubs(
+      hubsResult.data.flatMap((m) => (m.hubs ? [m.hubs] : [])),
+    )
     setTrips(tripsResult.data)
     setLoading(false)
     // weekStart dérive de weekOffset : la dépendance utile est weekOffset.
@@ -332,6 +354,7 @@ function SemainePage() {
       householdId={householdId}
       childrenList={childrenList}
       members={members}
+      myHubs={myHubs}
       trips={trips}
       weekStart={weekStart}
       onPreviousWeek={() => {
@@ -356,6 +379,7 @@ function WeekScreen({
   householdId,
   childrenList,
   members,
+  myHubs,
   trips,
   weekStart,
   onPreviousWeek,
@@ -366,6 +390,7 @@ function WeekScreen({
   householdId: string
   childrenList: Array<ChildOption>
   members: Array<Member>
+  myHubs: Array<HubOption>
   trips: Array<Trip>
   weekStart: WallClock
   onPreviousWeek: () => void
@@ -843,6 +868,7 @@ function WeekScreen({
               key={selectedTrip.id}
               trip={selectedTrip}
               members={members}
+              myHubs={myHubs}
               childName={
                 selectedTrip.trip_children[0]
                   ? (childName.get(selectedTrip.trip_children[0].child_id) ??
@@ -863,6 +889,7 @@ function WeekScreen({
 function TripDetail({
   trip,
   members,
+  myHubs,
   childName,
   onChanged,
   onPatched,
@@ -870,6 +897,7 @@ function TripDetail({
 }: {
   trip: Trip
   members: Array<Member>
+  myHubs: Array<HubOption>
   childName: string | null
   onChanged: () => void
   onPatched: (patch: Partial<Trip>) => void
@@ -1012,6 +1040,15 @@ function TripDetail({
         </div>
       )}
 
+      {trip.status !== 'annule' && (
+        <PublishSection
+          trip={trip}
+          myHubs={myHubs}
+          onPatched={onPatched}
+          onChanged={onChanged}
+        />
+      )}
+
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {trip.status === 'annule' ? (
           <button
@@ -1063,6 +1100,176 @@ function TripDetail({
           </p>
         )}
       </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------
+// Publication vers un hub (interdit n°9 : côté hub, ce trajet ne sera
+// lu que via hub_trips_view — jamais private_note, prénom d'enfant ou
+// contact). La dépublication ramène le trajet dans le cercle intime.
+// ---------------------------------------------------------------------
+function PublishSection({
+  trip,
+  myHubs,
+  onPatched,
+  onChanged,
+}: {
+  trip: Trip
+  myHubs: Array<HubOption>
+  onPatched: (patch: Partial<Trip>) => void
+  onChanged: () => void
+}) {
+  const [hubId, setHubId] = useState(myHubs[0]?.id ?? '')
+  const [seats, setSeats] = useState('2')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const publishedHub = myHubs.find((h) => h.id === trip.hub_id)
+
+  async function publish() {
+    setError(null)
+    const seatCount = Number(seats)
+    if (!hubId || !Number.isInteger(seatCount) || seatCount < 1) {
+      setError('Choisissez un hub et un nombre de places valide.')
+      return
+    }
+    setSubmitting(true)
+
+    const patch = {
+      hub_id: hubId,
+      published_to_hub: true,
+      seats_total: seatCount,
+      seats_available: seatCount,
+      status: 'couvert_ouvert' as TripStatus,
+    }
+    const { error: updateError } = await supabase
+      .from('trips')
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq('id', trip.id)
+
+    if (updateError) {
+      setError(updateError.message)
+      setSubmitting(false)
+      return
+    }
+
+    setSubmitting(false)
+    onPatched(patch)
+    onChanged()
+  }
+
+  async function unpublish() {
+    setError(null)
+    setSubmitting(true)
+
+    const patch = {
+      hub_id: null,
+      published_to_hub: false,
+      seats_total: null,
+      seats_available: null,
+      status: (trip.driver_id ? 'couvert' : 'non_couvert') as TripStatus,
+    }
+    const { error: updateError } = await supabase
+      .from('trips')
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq('id', trip.id)
+
+    if (updateError) {
+      setError(updateError.message)
+      setSubmitting(false)
+      return
+    }
+
+    setSubmitting(false)
+    onPatched(patch)
+    onChanged()
+  }
+
+  if (myHubs.length === 0) return null
+
+  return (
+    <div className="mt-4 border-t border-gray-200 pt-4">
+      <p className="text-sm font-medium text-gray-700">Partage au hub</p>
+
+      {trip.published_to_hub ? (
+        <div className="mt-2">
+          <p className="text-sm text-gray-600">
+            Publié vers « {publishedHub?.name ?? 'un hub'} » —{' '}
+            {trip.seats_available ?? 0} place
+            {(trip.seats_available ?? 0) > 1 ? 's' : ''} restante
+            {(trip.seats_available ?? 0) > 1 ? 's' : ''} sur{' '}
+            {trip.seats_total ?? 0}.
+          </p>
+          <button
+            type="button"
+            onClick={() => void unpublish()}
+            disabled={submitting}
+            className="mt-2 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {submitting ? 'Dépublication…' : 'Dépublier du hub'}
+          </button>
+        </div>
+      ) : !trip.driver_id ? (
+        <p className="mt-2 text-sm text-gray-500">
+          Désignez d’abord un conducteur pour pouvoir proposer des places au
+          hub.
+        </p>
+      ) : (
+        <div className="mt-2 flex flex-wrap items-end gap-3">
+          <div>
+            <label
+              htmlFor={`publish-hub-${trip.id}`}
+              className="block text-sm font-medium text-gray-700"
+            >
+              Hub
+            </label>
+            <select
+              id={`publish-hub-${trip.id}`}
+              value={hubId}
+              onChange={(e) => setHubId(e.target.value)}
+              className="mt-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              {myHubs.map((hub) => (
+                <option key={hub.id} value={hub.id}>
+                  {hub.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label
+              htmlFor={`publish-seats-${trip.id}`}
+              className="block text-sm font-medium text-gray-700"
+            >
+              Places disponibles
+            </label>
+            <input
+              id={`publish-seats-${trip.id}`}
+              type="number"
+              min={1}
+              max={8}
+              value={seats}
+              onChange={(e) => setSeats(e.target.value)}
+              className="mt-1 w-24 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => void publish()}
+            disabled={submitting}
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {submitting ? 'Publication…' : 'Publier'}
+          </button>
+        </div>
+      )}
+
+      {error && (
+        <p className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-800">
+          Une erreur est survenue : {error}
+        </p>
+      )}
     </div>
   )
 }

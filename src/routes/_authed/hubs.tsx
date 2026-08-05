@@ -68,6 +68,33 @@ interface HubMemberProfile {
   validated_at: string | null
 }
 
+// Ligne de hub_trips_view : le SEUL chemin de lecture des trajets côté
+// hub. Ni note privée, ni prénom d'enfant, ni contact — children_count
+// est un compte, pas une liste.
+interface HubTripRow {
+  id: string | null
+  direction: Database['public']['Enums']['trip_direction'] | null
+  status: Database['public']['Enums']['trip_status'] | null
+  scheduled_at: string | null
+  origin_label: string | null
+  destination_label: string | null
+  seats_available: number | null
+  driver_id: string | null
+  driver_first_name: string | null
+  children_count: number | null
+}
+
+function formatTripDate(iso: string): string {
+  return new Date(iso).toLocaleString('fr-BE', {
+    timeZone: 'Europe/Brussels',
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 interface HubDetailData {
   id: string
   name: string
@@ -229,6 +256,12 @@ function HubsPage() {
             <h1 className="text-xl font-semibold text-gray-900">Les hubs</h1>
             <div className="flex gap-3">
               <Link
+                to="/demandes"
+                className="text-sm text-blue-600 hover:underline"
+              >
+                Demandes
+              </Link>
+              <Link
                 to="/semaine"
                 className="text-sm text-blue-600 hover:underline"
               >
@@ -310,6 +343,8 @@ function HubsPage() {
               key={selectedMembership.hub_id}
               hubId={selectedMembership.hub_id}
               isAdmin={selectedMembership.is_admin}
+              userId={userId}
+              householdId={householdId}
             />
           ) : (
             <PactGate
@@ -419,19 +454,39 @@ function PactGate({
   )
 }
 
-function HubDetail({ hubId, isAdmin }: { hubId: string; isAdmin: boolean }) {
+function HubDetail({
+  hubId,
+  isAdmin,
+  userId,
+  householdId,
+}: {
+  hubId: string
+  isAdmin: boolean
+  userId: string
+  householdId: string
+}) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [hub, setHub] = useState<HubDetailData | null>(null)
   const [members, setMembers] = useState<Array<HubMemberProfile>>([])
   const [threshold, setThreshold] = useState<number | null>(null)
+  const [openTrips, setOpenTrips] = useState<Array<HubTripRow>>([])
+  const [myUserIds, setMyUserIds] = useState<Array<string>>([])
+  const [myChildren, setMyChildren] = useState<Array<{ id: string; first_name: string }>>([])
   const [activationBanner, setActivationBanner] = useState(false)
   const previousStatus = useRef<HubStatus | null>(null)
 
   const load = useCallback(async () => {
     setError(null)
 
-    const [hubResult, membersResult, thresholdResult] = await Promise.all([
+    const [
+      hubResult,
+      membersResult,
+      thresholdResult,
+      openTripsResult,
+      myMembersResult,
+      myChildrenResult,
+    ] = await Promise.all([
       supabase
         .from('hubs')
         .select('id, name, kind, status, join_code, place_label, municipality')
@@ -443,11 +498,43 @@ function HubDetail({ hubId, isAdmin }: { hubId: string; isAdmin: boolean }) {
         .select('value')
         .eq('key', 'hub_activation_member_count')
         .single(),
+      // Interdit n°9 : côté hub, les trajets se lisent EXCLUSIVEMENT via
+      // hub_trips_view. Jamais de select direct sur trips ici.
+      supabase
+        .from('hub_trips_view')
+        .select(
+          'id, direction, status, scheduled_at, origin_label, destination_label, seats_available, driver_id, driver_first_name, children_count',
+        )
+        .eq('hub_id', hubId)
+        .eq('status', 'couvert_ouvert')
+        .gt('scheduled_at', new Date().toISOString())
+        .order('scheduled_at'),
+      supabase
+        .from('household_members')
+        .select('user_id')
+        .eq('household_id', householdId),
+      supabase
+        .from('children')
+        .select('id, first_name')
+        .eq('household_id', householdId)
+        .order('created_at'),
     ])
 
     const firstError =
-      hubResult.error ?? membersResult.error ?? thresholdResult.error
-    if (firstError || !hubResult.data || !membersResult.data) {
+      hubResult.error ??
+      membersResult.error ??
+      thresholdResult.error ??
+      openTripsResult.error ??
+      myMembersResult.error ??
+      myChildrenResult.error
+    if (
+      firstError ||
+      !hubResult.data ||
+      !membersResult.data ||
+      !openTripsResult.data ||
+      !myMembersResult.data ||
+      !myChildrenResult.data
+    ) {
       setError(firstError?.message ?? 'Réponse inattendue du serveur')
       setLoading(false)
       return
@@ -468,8 +555,11 @@ function HubDetail({ hubId, isAdmin }: { hubId: string; isAdmin: boolean }) {
     setThreshold(
       thresholdResult.data ? Number(thresholdResult.data.value) : null,
     )
+    setOpenTrips(openTripsResult.data)
+    setMyUserIds(myMembersResult.data.map((m) => m.user_id))
+    setMyChildren(myChildrenResult.data)
     setLoading(false)
-  }, [hubId])
+  }, [hubId, householdId])
 
   useEffect(() => {
     void load()
@@ -576,7 +666,204 @@ function HubDetail({ hubId, isAdmin }: { hubId: string; isAdmin: boolean }) {
           </ul>
         </>
       )}
+
+      <h3 className="mt-6 text-sm font-medium text-gray-700">
+        Trajets ouverts des autres familles
+      </h3>
+      {(() => {
+        // « Par les autres familles » : les trajets de mon propre foyer
+        // (conducteur dans mon foyer) sont exclus de cette liste.
+        const otherTrips = openTrips.filter(
+          (t) => !t.driver_id || !myUserIds.includes(t.driver_id),
+        )
+        if (otherTrips.length === 0) {
+          return (
+            <p className="mt-2 text-sm text-gray-500">
+              Aucun trajet ouvert pour le moment. Les trajets publiés par les
+              autres familles du hub apparaîtront ici.
+            </p>
+          )
+        }
+        return (
+          <ul className="mt-2 divide-y divide-gray-100">
+            {otherTrips.map((t) => (
+              <HubTripCard
+                key={t.id}
+                trip={t}
+                userId={userId}
+                householdId={householdId}
+                myChildren={myChildren}
+                onRequested={load}
+              />
+            ))}
+          </ul>
+        )
+      })()}
     </div>
+  )
+}
+
+function HubTripCard({
+  trip,
+  userId,
+  householdId,
+  myChildren,
+  onRequested,
+}: {
+  trip: HubTripRow
+  userId: string
+  householdId: string
+  myChildren: Array<{ id: string; first_name: string }>
+  onRequested: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [childId, setChildId] = useState(myChildren[0]?.id ?? '')
+  const [message, setMessage] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Demande de place : crée une entrée en_attente. Le matching propose,
+  // seul le foyer conducteur accepte (interdit n°4).
+  async function request() {
+    if (!trip.id || !childId) return
+    setError(null)
+    setSubmitting(true)
+
+    const { error: insertError } = await supabase.from('trip_requests').insert({
+      trip_id: trip.id,
+      requester_id: userId,
+      requester_household_id: householdId,
+      child_id: childId,
+      message: message.trim() === '' ? null : message.trim(),
+    })
+
+    if (insertError) {
+      setError(
+        insertError.code === '23505'
+          ? 'Une demande est déjà en attente pour cet enfant sur ce trajet.'
+          : insertError.message,
+      )
+      setSubmitting(false)
+      return
+    }
+
+    setSubmitting(false)
+    setSent(true)
+    setOpen(false)
+    onRequested()
+  }
+
+  const seats = trip.seats_available ?? 0
+
+  return (
+    <li className="py-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-gray-900">
+            {trip.scheduled_at ? formatTripDate(trip.scheduled_at) : ''} ·{' '}
+            {trip.direction === 'aller' ? 'aller' : 'retour'}
+          </p>
+          <p className="text-sm text-gray-500">
+            {trip.origin_label} → {trip.destination_label}
+          </p>
+          <p className="text-sm text-gray-500">
+            {trip.driver_first_name
+              ? `Conduit par ${trip.driver_first_name}`
+              : 'Conducteur non renseigné'}
+            {' · '}
+            {seats} place{seats > 1 ? 's' : ''}
+            {' · '}
+            {trip.children_count ?? 0} enfant
+            {(trip.children_count ?? 0) > 1 ? 's' : ''} à bord
+          </p>
+        </div>
+        {!open && !sent && (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="shrink-0 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            Demander une place
+          </button>
+        )}
+      </div>
+
+      {sent && (
+        <p className="mt-2 rounded-md bg-green-50 p-3 text-sm text-green-800">
+          Demande envoyée. Le conducteur doit maintenant l’accepter — suivez
+          son état dans « Mes demandes ».
+        </p>
+      )}
+
+      {open &&
+        (myChildren.length === 0 ? (
+          <p className="mt-2 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
+            Ajoutez d’abord un enfant à votre foyer pour demander une place.
+          </p>
+        ) : (
+          <div className="mt-3 space-y-3 rounded-md border border-gray-200 p-4">
+            <div>
+              <label
+                htmlFor={`request-child-${trip.id}`}
+                className="block text-sm font-medium text-gray-700"
+              >
+                Pour quel enfant ?
+              </label>
+              <select
+                id={`request-child-${trip.id}`}
+                value={childId}
+                onChange={(e) => setChildId(e.target.value)}
+                className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                {myChildren.map((child) => (
+                  <option key={child.id} value={child.id}>
+                    {child.first_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label
+                htmlFor={`request-message-${trip.id}`}
+                className="block text-sm font-medium text-gray-700"
+              >
+                Message (optionnel)
+              </label>
+              <textarea
+                id={`request-message-${trip.id}`}
+                rows={2}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={() => void request()}
+                disabled={submitting || !childId}
+                className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitting ? 'Envoi…' : 'Envoyer la demande'}
+              </button>
+            </div>
+          </div>
+        ))}
+
+      {error && (
+        <p className="mt-2 rounded-md bg-red-50 p-3 text-sm text-red-800">
+          Une erreur est survenue : {error}
+        </p>
+      )}
+    </li>
   )
 }
 

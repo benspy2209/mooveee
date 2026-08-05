@@ -1460,6 +1460,7 @@ export type Database = {
       auth_hub_admin_ids: { Args: never; Returns: string[] }
       auth_hub_ids: { Args: never; Returns: string[] }
       auth_hub_member_user_ids: { Args: never; Returns: string[] }
+      accept_trip_request: { Args: { p_request: string }; Returns: undefined }
       child_belongs_to_household: {
         Args: { p_child: string; p_household: string }
         Returns: boolean
