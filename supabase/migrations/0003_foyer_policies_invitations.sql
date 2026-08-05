@@ -122,4 +122,22 @@ create policy hi_admin_insert on household_invitations for insert
     and invited_by = auth.uid()
   );
 
+-- =====================================================================
+-- 5. CORRECTION : un admin gere les membres existants mais n en ajoute
+-- pas d autorite. L entree dans un foyer reste un acte volontaire.
+-- =====================================================================
+
+drop policy if exists hm_admin_write on household_members;
+
+create policy hm_admin_select on household_members for select
+  using (household_id in (select auth_household_ids()));
+
+create policy hm_admin_update on household_members for update
+  using (household_id in (select auth_admin_household_ids()))
+  with check (household_id in (select auth_admin_household_ids()));
+
+create policy hm_admin_delete on household_members for delete
+  using (household_id in (select auth_admin_household_ids()));
+
 commit;
+
