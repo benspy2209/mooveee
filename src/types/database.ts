@@ -1428,6 +1428,34 @@ export type Database = {
           seats_available: number | null
           status: Database["public"]["Enums"]["trip_status"] | null
         }
+        Insert: {
+          children_count?: never
+          destination_label?: string | null
+          direction?: Database["public"]["Enums"]["trip_direction"] | null
+          driver_first_name?: never
+          driver_id?: string | null
+          hub_id?: string | null
+          id?: string | null
+          meeting_point_id?: string | null
+          origin_label?: string | null
+          scheduled_at?: string | null
+          seats_available?: number | null
+          status?: Database["public"]["Enums"]["trip_status"] | null
+        }
+        Update: {
+          children_count?: never
+          destination_label?: string | null
+          direction?: Database["public"]["Enums"]["trip_direction"] | null
+          driver_first_name?: never
+          driver_id?: string | null
+          hub_id?: string | null
+          id?: string | null
+          meeting_point_id?: string | null
+          origin_label?: string | null
+          scheduled_at?: string | null
+          seats_available?: number | null
+          status?: Database["public"]["Enums"]["trip_status"] | null
+        }
         Relationships: [
           {
             foreignKeyName: "trips_driver_id_fkey"
@@ -1454,13 +1482,13 @@ export type Database = {
       }
     }
     Functions: {
+      accept_trip_request: { Args: { p_request: string }; Returns: undefined }
       auth_admin_household_ids: { Args: never; Returns: string[] }
       auth_household_ids: { Args: never; Returns: string[] }
       auth_household_member_ids: { Args: never; Returns: string[] }
       auth_hub_admin_ids: { Args: never; Returns: string[] }
       auth_hub_ids: { Args: never; Returns: string[] }
       auth_hub_member_user_ids: { Args: never; Returns: string[] }
-      accept_trip_request: { Args: { p_request: string }; Returns: undefined }
       child_belongs_to_household: {
         Args: { p_child: string; p_household: string }
         Returns: boolean
@@ -1484,7 +1512,12 @@ export type Database = {
           validated_at: string
         }[]
       }
+      hub_user_first_name: { Args: { p_user: string }; Returns: string }
       trip_child_household_match: {
+        Args: { p_child: string; p_trip: string }
+        Returns: boolean
+      }
+      trip_child_hub_request_accepted: {
         Args: { p_child: string; p_trip: string }
         Returns: boolean
       }

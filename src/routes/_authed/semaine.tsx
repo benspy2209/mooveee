@@ -484,7 +484,6 @@ function WeekScreen({
     }
 
     const newTrips: Array<NewTrip> = []
-    const childByKey = new Map<string, string>()
 
     function pushOccurrence(
       activity: ActivityRecord,
@@ -506,7 +505,6 @@ function WeekScreen({
         const key = `${activity.id}|${occ.direction}|${iso}`
         if (existingKeys.has(key)) continue
         existingKeys.add(key)
-        childByKey.set(key, activity.child_id)
         newTrips.push({
           household_id: householdId,
           activity_id: activity.id,
@@ -556,59 +554,79 @@ function WeekScreen({
       }
     }
 
-    if (newTrips.length === 0) {
-      setGenerationMessage('Tout est à jour : aucun nouveau trajet à créer.')
-      setGenerating(false)
-      return
-    }
-
     // Insertion par lots. upsert + ignoreDuplicates = ON CONFLICT DO
     // NOTHING sur l'index unique : seuls les trajets réellement créés
     // sont renvoyés, les existants ne sont pas touchés.
-    setGenerationProgress({ done: 0, total: newTrips.length })
-    const inserted: Array<{
-      id: string
-      activity_id: string | null
-      direction: TripDirection
-      scheduled_at: string
-    }> = []
+    let insertedCount = 0
+    if (newTrips.length > 0) {
+      setGenerationProgress({ done: 0, total: newTrips.length })
+      for (let i = 0; i < newTrips.length; i += INSERT_BATCH_SIZE) {
+        const batch = newTrips.slice(i, i + INSERT_BATCH_SIZE)
+        const { data: batchInserted, error: insertError } = await supabase
+          .from('trips')
+          .upsert(batch, {
+            onConflict: 'activity_id,direction,scheduled_at',
+            ignoreDuplicates: true,
+          })
+          .select('id')
 
-    for (let i = 0; i < newTrips.length; i += INSERT_BATCH_SIZE) {
-      const batch = newTrips.slice(i, i + INSERT_BATCH_SIZE)
-      const { data: batchInserted, error: insertError } = await supabase
-        .from('trips')
-        .upsert(batch, {
-          onConflict: 'activity_id,direction,scheduled_at',
-          ignoreDuplicates: true,
+        if (insertError || !batchInserted) {
+          setGenerationError(
+            insertError?.message ?? 'Réponse inattendue du serveur',
+          )
+          setGenerating(false)
+          setGenerationProgress(null)
+          return
+        }
+
+        insertedCount += batchInserted.length
+        setGenerationProgress({
+          done: Math.min(i + INSERT_BATCH_SIZE, newTrips.length),
+          total: newTrips.length,
         })
-        .select('id, activity_id, direction, scheduled_at')
+      }
+    }
 
-      if (insertError || !batchInserted) {
-        setGenerationError(
-          insertError?.message ?? 'Réponse inattendue du serveur',
-        )
+    // Rattachement des enfants — rattrapage intégré : chaque génération
+    // (re)pose le lien enfant/activité sur TOUS les trajets générés du
+    // foyer, nouveaux comme anciens. Idempotent via la clé primaire
+    // (trip_id, child_id) : ON CONFLICT DO NOTHING, jamais de doublon.
+    const childByActivity = new Map(
+      activitiesResult.data.map((a) => [a.id, a.child_id]),
+    )
+    const links: Array<{ trip_id: string; child_id: string }> = []
+    const PAGE_SIZE = 1000
+    for (let from = 0; ; from += PAGE_SIZE) {
+      const { data: page, error: pageError } = await supabase
+        .from('trips')
+        .select('id, activity_id')
+        .eq('household_id', householdId)
+        .not('activity_id', 'is', null)
+        .order('id')
+        .range(from, from + PAGE_SIZE - 1)
+
+      if (pageError || !page) {
+        setGenerationError(pageError?.message ?? 'Réponse inattendue du serveur')
         setGenerating(false)
         setGenerationProgress(null)
         return
       }
-
-      inserted.push(...batchInserted)
-      setGenerationProgress({
-        done: Math.min(i + INSERT_BATCH_SIZE, newTrips.length),
-        total: newTrips.length,
-      })
+      for (const t of page) {
+        const childId = t.activity_id
+          ? childByActivity.get(t.activity_id)
+          : undefined
+        if (childId) links.push({ trip_id: t.id, child_id: childId })
+      }
+      if (page.length < PAGE_SIZE) break
     }
-
-    const links = inserted.flatMap((trip) => {
-      const key = `${trip.activity_id}|${trip.direction}|${new Date(trip.scheduled_at).toISOString()}`
-      const childId = childByKey.get(key)
-      return childId ? [{ trip_id: trip.id, child_id: childId }] : []
-    })
 
     for (let i = 0; i < links.length; i += INSERT_BATCH_SIZE) {
       const { error: linkError } = await supabase
         .from('trip_children')
-        .insert(links.slice(i, i + INSERT_BATCH_SIZE))
+        .upsert(links.slice(i, i + INSERT_BATCH_SIZE), {
+          onConflict: 'trip_id,child_id',
+          ignoreDuplicates: true,
+        })
 
       if (linkError) {
         setGenerationError(linkError.message)
@@ -621,9 +639,9 @@ function WeekScreen({
     const horizonLabel =
       HORIZONS.find((h) => h.days === horizonDays)?.label ?? `${horizonDays} jours`
     setGenerationMessage(
-      inserted.length === 0
-        ? 'Tout est à jour : aucun nouveau trajet à créer.'
-        : `${inserted.length} trajet${inserted.length > 1 ? 's' : ''} créé${inserted.length > 1 ? 's' : ''} sur ${horizonLabel}.`,
+      insertedCount === 0
+        ? 'Tout est à jour : aucun nouveau trajet à créer. Enfants rattachés vérifiés sur les trajets existants.'
+        : `${insertedCount} trajet${insertedCount > 1 ? 's' : ''} créé${insertedCount > 1 ? 's' : ''} sur ${horizonLabel}, enfants rattachés.`,
     )
     setGenerating(false)
     setGenerationProgress(null)
