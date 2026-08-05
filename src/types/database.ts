@@ -264,6 +264,51 @@ export type Database = {
           },
         ]
       }
+      household_invitations: {
+        Row: {
+          created_at: string
+          email: string
+          household_id: string
+          id: string
+          invited_by: string
+          role: Database["public"]["Enums"]["household_role"]
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          household_id: string
+          id?: string
+          invited_by: string
+          role?: Database["public"]["Enums"]["household_role"]
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          household_id?: string
+          id?: string
+          invited_by?: string
+          role?: Database["public"]["Enums"]["household_role"]
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "household_invitations_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "household_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       household_members: {
         Row: {
           household_id: string
@@ -1434,7 +1479,9 @@ export type Database = {
       }
     }
     Functions: {
+      auth_admin_household_ids: { Args: never; Returns: string[] }
       auth_household_ids: { Args: never; Returns: string[] }
+      auth_household_member_ids: { Args: never; Returns: string[] }
       auth_hub_ids: { Args: never; Returns: string[] }
     }
     Enums: {
