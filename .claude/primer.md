@@ -1,8 +1,11 @@
 # Primer Mooveee
 
 Projet actif : Mooveee (client externe, partage de trajets enfants).
-Séquence CLAUDE.md : étape 5 (hubs) — socle livré, publication des
-trajets vers le hub à venir (2e prompt).
+Séquence CLAUDE.md : étape 5 (hubs) livrée — socle + publication +
+demandes de place. Contrainte 0006 ÉLARGIE par Ben en fin de 0009
+(appliquée) : enfant rattachable à un trajet de son foyer OU à un
+trajet hub avec demande acceptée (trip_child_hub_request_accepted).
+Acceptation débloquée, message UI temporaire retiré (c4f39f2).
 
 ## Fait
 - Auth magic link + onboarding profil /bienvenue (étape 1).
@@ -90,14 +93,52 @@ trajets vers le hub à venir (2e prompt).
     tasks/lessons.md. Pas touché : publication trajets, matching,
     Mooves.
 
+- 05/08 : publication hub + demandes (8429794) : modale /semaine →
+  PublishSection (hub + places, conducteur requis, statut
+  couvert_ouvert ; dépublier → couvert/non_couvert, seats null). Écran
+  hub : « Trajets ouverts des autres familles » lu EXCLUSIVEMENT via
+  hub_trips_view (à venir, couvert_ouvert, foyer propre exclu par
+  driver_id), demande de place (enfant + message, unique en_attente
+  par enfant/trajet, 23505 traduit). /demandes : envoyées (détails via
+  la vue, enfant nommé côté demandeur seulement) + reçues (trips
+  nested = MON foyer, légitime ; nom demandeur via hub_member_profiles,
+  jamais users ; enfant du demandeur JAMAIS nommé côté conducteur).
+  Accepter = rpc accept_trip_request (clic humain), Refuser = update.
+  - Migration 0009 (NON APPLIQUÉE) : hub_trips_view recréée avec
+    hub_user_first_name() (le join users direct renvoyait NULL depuis
+    le retrait de users_hub_select) ; trip_requests_insert resserrée
+    (foyer, enfant du foyer, trajet publié couvert_ouvert, jamais son
+    propre trajet) ; index unique en_attente ; RPC accept_trip_request
+    atomique (statut+trip_children+décrément+couvert si 0).
+  - ⚠️ SIGNALÉ, NON CONTOURNÉ : la contrainte 0006
+    trip_children_household_match bloque l'acceptation (enfant d'un
+    AUTRE foyer par construction). Proposition de détente en
+    commentaire dans 0009, arbitrage Ben requis. Message UI clair si
+    l'erreur survient.
+
+- 05/08 : fix génération (5766c1e) : rattachement enfant/trajet
+  intégré à chaque génération, sur TOUS les trajets générés du foyer
+  (rattrapage inclus, upsert ON CONFLICT DO NOTHING sur PK
+  trip_id/child_id, pagination 1000). Cause du bug : liens posés
+  uniquement sur les trajets nouvellement insérés → trajets créés
+  avant l'application de la policy 0006 jamais rattrapés.
+- seats_available TRANCHÉ par Ben le 05/08 : sémantique « places
+  offertes aux autres familles », aucun calcul, labels renommés dans
+  la modale de publication et la liste hub (fbc8d5c).
+
 ## Next step exact
-1. Ben applique les migrations 0004 → 0008, puis régénère les types.
+1. Ben relance « Générer les trajets » (rattrape Matteo sur Tennis).
+2. Tester le parcours hub complet : publier → demander → accepter
+   → places à 0 → couvert.
+3. Étape 7 : système Mooves (sans aucune brique de paiement).
+2. Étape 6 : lien filtré cercle intime vers hub (déjà en place via
+   hub_trips_view) puis étape 7 : système Mooves (sans paiement).
 2. Tester : activités → Générer les trajets → attribuer conducteur,
    annuler/rétablir, naviguer les semaines.
 3. Étape 5 : statuts de hub et transition solo → active.
 
 ## Blockers
-- Migrations 0004/0005/0006/0007 pas appliquées → photos, activités
-  et vue Semaine échoueront tant que non poussées (0007 requise pour
-  le ON CONFLICT de la génération).
+- Migrations : 0009 appliquée par Ben (contrainte élargie, types
+  régénérés). Statut exact de 0004→0008 non confirmé un par un —
+  vérifier au premier test si une policy manque.
 - .gitignore modifié non commité (préexistant, pas touché).
