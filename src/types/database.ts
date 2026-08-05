@@ -1460,14 +1460,32 @@ export type Database = {
       auth_hub_admin_ids: { Args: never; Returns: string[] }
       auth_hub_ids: { Args: never; Returns: string[] }
       auth_hub_member_user_ids: { Args: never; Returns: string[] }
+      child_belongs_to_household: {
+        Args: { p_child: string; p_household: string }
+        Returns: boolean
+      }
       hub_for_join_code: {
         Args: { p_code: string }
         Returns: {
           id: string
-          name: string
           kind: Database["public"]["Enums"]["hub_kind"]
           municipality: string
+          name: string
         }[]
+      }
+      hub_member_profiles: {
+        Args: { p_hub: string }
+        Returns: {
+          first_name: string
+          is_admin: boolean
+          last_name: string
+          user_id: string
+          validated_at: string
+        }[]
+      }
+      trip_child_household_match: {
+        Args: { p_child: string; p_trip: string }
+        Returns: boolean
       }
     }
     Enums: {

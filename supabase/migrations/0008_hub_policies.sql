@@ -122,3 +122,36 @@ create policy hub_pact_self_insert on hub_pact_acceptances for insert
 drop policy if exists users_hub_select on users;
 create policy users_hub_select on users for select
   using (id in (select auth_hub_member_user_ids()));
+
+-- --- CORRECTIF : pas de lecture de users cote hub ---------------------
+-- Une policy RLS filtre les LIGNES, jamais les COLONNES. users_hub_select
+-- exposait telephone et code postal a tout co-membre de hub via un
+-- select * direct. Dans un foyer c est acceptable, dans un hub non :
+-- on est entre inconnus (Doc1 §12.4, zones domicile floutees).
+
+drop policy if exists users_hub_select on users;
+
+create or replace function hub_member_profiles(p_hub uuid)
+returns table (user_id uuid, first_name text, last_name text,
+               is_admin boolean, validated_at timestamptz)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select u.id, u.first_name, u.last_name, hm.is_admin, hm.validated_at
+  from hub_members hm
+  join users u on u.id = hm.user_id
+  where hm.hub_id = p_hub
+    and exists (
+      select 1 from hub_members me
+      where me.hub_id = p_hub
+        and me.user_id = auth.uid()
+        and me.validated_at is not null
+    );
+$$;
+
+comment on function hub_member_profiles is
+  'Seul chemin autorise pour lire les profils cote hub. Ne renvoie que '
+  'prenom, nom et statut. Jamais telephone, code postal, avatar ou '
+  'locale. Reserve aux membres valides du hub interroge.';

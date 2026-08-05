@@ -57,12 +57,15 @@ interface Acceptance {
   pact_version: string
 }
 
-interface HubMemberRow {
-  id: string
+// Profils côté hub : UNIQUEMENT via le RPC hub_member_profiles (0008).
+// Jamais de lecture directe de la table users dans un contexte hub :
+// une policy RLS filtre les lignes, pas les colonnes.
+interface HubMemberProfile {
   user_id: string
+  first_name: string
+  last_name: string | null
   is_admin: boolean
   validated_at: string | null
-  users: { first_name: string; last_name: string | null } | null
 }
 
 interface HubDetailData {
@@ -75,9 +78,8 @@ interface HubDetailData {
   municipality: string
 }
 
-function memberDisplayName(row: HubMemberRow): string {
-  if (!row.users) return 'Profil non renseigné'
-  return `${row.users.first_name}${row.users.last_name ? ` ${row.users.last_name}` : ''}`
+function memberDisplayName(row: HubMemberProfile): string {
+  return `${row.first_name}${row.last_name ? ` ${row.last_name}` : ''}`
 }
 
 // Code court lisible : 3 lettres + 3 chiffres, sans caractères ambigus.
@@ -421,7 +423,7 @@ function HubDetail({ hubId, isAdmin }: { hubId: string; isAdmin: boolean }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [hub, setHub] = useState<HubDetailData | null>(null)
-  const [members, setMembers] = useState<Array<HubMemberRow>>([])
+  const [members, setMembers] = useState<Array<HubMemberProfile>>([])
   const [threshold, setThreshold] = useState<number | null>(null)
   const [activationBanner, setActivationBanner] = useState(false)
   const previousStatus = useRef<HubStatus | null>(null)
@@ -435,11 +437,7 @@ function HubDetail({ hubId, isAdmin }: { hubId: string; isAdmin: boolean }) {
         .select('id, name, kind, status, join_code, place_label, municipality')
         .eq('id', hubId)
         .single(),
-      supabase
-        .from('hub_members')
-        .select('id, user_id, is_admin, validated_at, users(first_name, last_name)')
-        .eq('hub_id', hubId)
-        .order('joined_at'),
+      supabase.rpc('hub_member_profiles', { p_hub: hubId }),
       supabase
         .from('app_settings')
         .select('value')
@@ -552,7 +550,7 @@ function HubDetail({ hubId, isAdmin }: { hubId: string; isAdmin: boolean }) {
       <ul className="mt-2 divide-y divide-gray-100">
         {validatedMembers.map((m) => (
           <li
-            key={m.id}
+            key={m.user_id}
             className="flex items-center justify-between py-3 text-sm"
           >
             <span className="text-gray-900">{memberDisplayName(m)}</span>
@@ -568,7 +566,12 @@ function HubDetail({ hubId, isAdmin }: { hubId: string; isAdmin: boolean }) {
           </h3>
           <ul className="mt-2 divide-y divide-gray-100">
             {pendingMembers.map((m) => (
-              <PendingMemberRow key={m.id} member={m} onChanged={load} />
+              <PendingMemberRow
+                key={m.user_id}
+                hubId={hubId}
+                member={m}
+                onChanged={load}
+              />
             ))}
           </ul>
         </>
@@ -578,10 +581,12 @@ function HubDetail({ hubId, isAdmin }: { hubId: string; isAdmin: boolean }) {
 }
 
 function PendingMemberRow({
+  hubId,
   member,
   onChanged,
 }: {
-  member: HubMemberRow
+  hubId: string
+  member: HubMemberProfile
   onChanged: () => void
 }) {
   const [submitting, setSubmitting] = useState(false)
@@ -595,7 +600,8 @@ function PendingMemberRow({
     const { error: updateError } = await supabase
       .from('hub_members')
       .update({ validated_at: new Date().toISOString() })
-      .eq('id', member.id)
+      .eq('hub_id', hubId)
+      .eq('user_id', member.user_id)
 
     if (updateError) {
       setError(updateError.message)
@@ -613,7 +619,8 @@ function PendingMemberRow({
     const { error: deleteError } = await supabase
       .from('hub_members')
       .delete()
-      .eq('id', member.id)
+      .eq('hub_id', hubId)
+      .eq('user_id', member.user_id)
 
     if (deleteError) {
       setError(deleteError.message)
