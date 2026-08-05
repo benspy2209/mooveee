@@ -331,6 +331,13 @@ function HouseholdScreen({
           >
             Gérer les enfants du foyer
           </Link>
+
+          <Link
+            to="/activites"
+            className="mt-3 block w-full rounded-md border border-gray-300 px-4 py-2 text-center text-sm font-medium text-gray-700 hover:bg-gray-100"
+          >
+            Gérer les activités des enfants
+          </Link>
         </div>
 
         <button

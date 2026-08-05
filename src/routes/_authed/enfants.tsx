@@ -195,9 +195,20 @@ function ChildrenScreen({
             <h1 className="text-xl font-semibold text-gray-900">
               Les enfants du foyer
             </h1>
-            <Link to="/foyer" className="text-sm text-blue-600 hover:underline">
-              Mon foyer
-            </Link>
+            <div className="flex gap-3">
+              <Link
+                to="/activites"
+                className="text-sm text-blue-600 hover:underline"
+              >
+                Activités
+              </Link>
+              <Link
+                to="/foyer"
+                className="text-sm text-blue-600 hover:underline"
+              >
+                Mon foyer
+              </Link>
+            </div>
           </div>
 
           {children.length === 0 && !adding && (

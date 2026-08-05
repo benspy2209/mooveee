@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthedActivitesRouteImport } from './routes/_authed/activites'
 import { Route as AuthedBienvenueRouteImport } from './routes/_authed/bienvenue'
 import { Route as AuthedEnfantsRouteImport } from './routes/_authed/enfants'
 import { Route as AuthedFoyerRouteImport } from './routes/_authed/foyer'
@@ -29,6 +30,11 @@ const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthedActivitesRoute = AuthedActivitesRouteImport.update({
+  id: '/activites',
+  path: '/activites',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedBienvenueRoute = AuthedBienvenueRouteImport.update({
   id: '/bienvenue',
@@ -49,6 +55,7 @@ const AuthedFoyerRoute = AuthedFoyerRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/activites': typeof AuthedActivitesRoute
   '/bienvenue': typeof AuthedBienvenueRoute
   '/enfants': typeof AuthedEnfantsRoute
   '/foyer': typeof AuthedFoyerRoute
@@ -56,6 +63,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/activites': typeof AuthedActivitesRoute
   '/bienvenue': typeof AuthedBienvenueRoute
   '/enfants': typeof AuthedEnfantsRoute
   '/foyer': typeof AuthedFoyerRoute
@@ -65,20 +73,23 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
   '/login': typeof LoginRoute
+  '/_authed/activites': typeof AuthedActivitesRoute
   '/_authed/bienvenue': typeof AuthedBienvenueRoute
   '/_authed/enfants': typeof AuthedEnfantsRoute
   '/_authed/foyer': typeof AuthedFoyerRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/bienvenue' | '/enfants' | '/foyer'
+  fullPaths:
+    '/' | '/login' | '/activites' | '/bienvenue' | '/enfants' | '/foyer'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/bienvenue' | '/enfants' | '/foyer'
+  to: '/' | '/login' | '/activites' | '/bienvenue' | '/enfants' | '/foyer'
   id:
     | '__root__'
     | '/'
     | '/_authed'
     | '/login'
+    | '/_authed/activites'
     | '/_authed/bienvenue'
     | '/_authed/enfants'
     | '/_authed/foyer'
@@ -113,6 +124,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/activites': {
+      id: '/_authed/activites'
+      path: '/activites'
+      fullPath: '/activites'
+      preLoaderRoute: typeof AuthedActivitesRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/bienvenue': {
       id: '/_authed/bienvenue'
       path: '/bienvenue'
@@ -138,12 +156,14 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthedRouteChildren {
+  AuthedActivitesRoute: typeof AuthedActivitesRoute
   AuthedBienvenueRoute: typeof AuthedBienvenueRoute
   AuthedEnfantsRoute: typeof AuthedEnfantsRoute
   AuthedFoyerRoute: typeof AuthedFoyerRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedActivitesRoute: AuthedActivitesRoute,
   AuthedBienvenueRoute: AuthedBienvenueRoute,
   AuthedEnfantsRoute: AuthedEnfantsRoute,
   AuthedFoyerRoute: AuthedFoyerRoute,
