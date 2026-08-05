@@ -1,7 +1,8 @@
 # Primer Mooveee
 
 Projet actif : Mooveee (client externe, partage de trajets enfants).
-Séquence CLAUDE.md : étape 4 (trajets internes, vue Semaine) livrée.
+Séquence CLAUDE.md : étape 5 (hubs) — socle livré, publication des
+trajets vers le hub à venir (2e prompt).
 
 ## Fait
 - Auth magic link + onboarding profil /bienvenue (étape 1).
@@ -65,9 +66,32 @@ Séquence CLAUDE.md : étape 4 (trajets internes, vue Semaine) livrée.
 - 05/08 : fixes /semaine (5aa77b0) : patch optimiste de la grille
   (conducteur/annulation affichés immédiatement, refetch en fond) ;
   détail trajet en modale centrée (Escape + clic fond pour fermer).
+- 05/08 : hubs socle (8c491d7) : /_authed/hubs — création (nom, type,
+  lieu, commune, join_code ABC123 sans caractères ambigus, retry sur
+  collision 23505, owner = 1er membre validé admin, statut solo),
+  adhésion par code via RPC hub_for_join_code (security definer, seule
+  l'identité publique du hub), demande non validée → un admin valide
+  (update) ou refuse (delete). Pacte v1.0 en dur, accepté à la
+  création/adhésion, gate PactGate si version manquante, enregistré
+  dans hub_pact_acceptances. Détail hub : statut + compteur validés +
+  « encore N pour activer » (seuil app_settings), bannière visible à
+  la bascule solo→active (trigger DB existant), join_code affiché aux
+  admins seulement, membres validés prénom/nom.
+  - Migration 0008 (NON APPLIQUÉE, Ben pousse) : helpers
+    auth_hub_admin_ids / auth_hub_member_user_ids / hub_for_join_code ;
+    hub_members_self_insert verrouillé (auto-validation/auto-admin
+    interdits sauf owner bootstrap), admin update/delete ; policies
+    hub_pact_acceptances (self select/insert, ni update ni delete) ;
+    users_hub_select (noms entre co-membres de hub).
+  - Correctif Ben (a94bc09) : users_hub_select SUPPRIMÉE (exposait
+    téléphone/CP — RLS filtre les lignes, pas les colonnes). Profils
+    côté hub UNIQUEMENT via RPC hub_member_profiles(p_hub). Types
+    régénérés par Ben (0008 partiellement appliquée ?). Leçon dans
+    tasks/lessons.md. Pas touché : publication trajets, matching,
+    Mooves.
 
 ## Next step exact
-1. Ben applique les migrations 0004, 0005, 0006, 0007.
+1. Ben applique les migrations 0004 → 0008, puis régénère les types.
 2. Tester : activités → Générer les trajets → attribuer conducteur,
    annuler/rétablir, naviguer les semaines.
 3. Étape 5 : statuts de hub et transition solo → active.
