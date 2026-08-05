@@ -286,6 +286,12 @@ function ActivitiesScreen({
             </h1>
             <div className="flex gap-3">
               <Link
+                to="/semaine"
+                className="text-sm text-blue-600 hover:underline"
+              >
+                Semaine
+              </Link>
+              <Link
                 to="/enfants"
                 className="text-sm text-blue-600 hover:underline"
               >

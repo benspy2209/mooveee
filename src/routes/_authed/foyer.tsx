@@ -338,6 +338,13 @@ function HouseholdScreen({
           >
             Gérer les activités des enfants
           </Link>
+
+          <Link
+            to="/semaine"
+            className="mt-3 block w-full rounded-md border border-gray-300 px-4 py-2 text-center text-sm font-medium text-gray-700 hover:bg-gray-100"
+          >
+            Voir la semaine et les trajets
+          </Link>
         </div>
 
         <button
