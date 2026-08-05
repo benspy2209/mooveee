@@ -169,3 +169,61 @@ comment on function accept_trip_request is
   'transaction : statut accepte, enfant dans trip_children, décrément '
   'des places, couvert si plein. Appelée uniquement sur clic humain — '
   'le matching propose, il n assigne jamais (interdit n°4).';
+
+-- --- DETENTE DE LA CONTRAINTE 0006 -----------------------------------
+-- Arbitrage : la contrainte est ELARGIE, jamais supprimee. Un enfant
+-- reste rattachable a un trajet de son propre foyer, OU a un trajet
+-- publie au hub pour lequel une demande a ete acceptee. Supprimer la
+-- contrainte rouvrirait la faille qu elle ferme : rattacher n importe
+-- quel enfant a n importe quel trajet avec un simple UUID.
+
+create or replace function trip_child_hub_request_accepted(p_trip uuid, p_child uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from trip_requests tr
+    join trips t on t.id = tr.trip_id
+    join children c on c.id = tr.child_id
+    where tr.trip_id = p_trip
+      and tr.child_id = p_child
+      and tr.status = 'accepte'
+      and t.published_to_hub
+      and t.hub_id is not null
+      -- le foyer de l enfant et le foyer conducteur sont tous deux
+      -- membres valides du meme hub
+      and exists (
+        select 1 from hub_members hm
+        join household_members hmem on hmem.household_id = c.household_id
+        where hm.hub_id = t.hub_id
+          and hm.user_id = hmem.user_id
+          and hm.validated_at is not null
+      )
+      and exists (
+        select 1 from hub_members hm
+        join household_members hmem on hmem.household_id = t.household_id
+        where hm.hub_id = t.hub_id
+          and hm.user_id = hmem.user_id
+          and hm.validated_at is not null
+      )
+  );
+$$;
+
+comment on function trip_child_hub_request_accepted is
+  'Vrai si l enfant est sur ce trajet via une demande de hub acceptee, '
+  'les deux foyers etant membres valides du hub. Elargit la contrainte '
+  'de 0006 sans l ouvrir.';
+
+alter table trip_children
+  drop constraint if exists trip_children_household_match;
+
+alter table trip_children
+  add constraint trip_children_household_match
+  check (
+    trip_child_household_match(trip_id, child_id)
+    or trip_child_hub_request_accepted(trip_id, child_id)
+  );

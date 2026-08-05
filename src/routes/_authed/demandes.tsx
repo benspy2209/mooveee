@@ -359,13 +359,7 @@ function ReceivedRequestRow({
     })
 
     if (rpcError) {
-      setError(
-        rpcError.message.includes('trip_children_household_match')
-          ? 'Blocage connu : la contrainte de cohérence enfant/foyer ' +
-              '(migration 0006) empêche encore d’accepter un enfant d’un ' +
-              'autre foyer. Arbitrage en attente côté base de données.'
-          : rpcError.message,
-      )
+      setError(rpcError.message)
       setSubmitting(false)
       return
     }
