@@ -16,6 +16,7 @@ import { Route as AuthedActivitesRouteImport } from './routes/_authed/activites'
 import { Route as AuthedBienvenueRouteImport } from './routes/_authed/bienvenue'
 import { Route as AuthedEnfantsRouteImport } from './routes/_authed/enfants'
 import { Route as AuthedFoyerRouteImport } from './routes/_authed/foyer'
+import { Route as AuthedHubsRouteImport } from './routes/_authed/hubs'
 import { Route as AuthedSemaineRouteImport } from './routes/_authed/semaine'
 
 const IndexRoute = IndexRouteImport.update({
@@ -52,6 +53,11 @@ const AuthedFoyerRoute = AuthedFoyerRouteImport.update({
   path: '/foyer',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedHubsRoute = AuthedHubsRouteImport.update({
+  id: '/hubs',
+  path: '/hubs',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedSemaineRoute = AuthedSemaineRouteImport.update({
   id: '/semaine',
   path: '/semaine',
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/bienvenue': typeof AuthedBienvenueRoute
   '/enfants': typeof AuthedEnfantsRoute
   '/foyer': typeof AuthedFoyerRoute
+  '/hubs': typeof AuthedHubsRoute
   '/semaine': typeof AuthedSemaineRoute
 }
 export interface FileRoutesByTo {
@@ -74,6 +81,7 @@ export interface FileRoutesByTo {
   '/bienvenue': typeof AuthedBienvenueRoute
   '/enfants': typeof AuthedEnfantsRoute
   '/foyer': typeof AuthedFoyerRoute
+  '/hubs': typeof AuthedHubsRoute
   '/semaine': typeof AuthedSemaineRoute
 }
 export interface FileRoutesById {
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/_authed/bienvenue': typeof AuthedBienvenueRoute
   '/_authed/enfants': typeof AuthedEnfantsRoute
   '/_authed/foyer': typeof AuthedFoyerRoute
+  '/_authed/hubs': typeof AuthedHubsRoute
   '/_authed/semaine': typeof AuthedSemaineRoute
 }
 export interface FileRouteTypes {
@@ -96,6 +105,7 @@ export interface FileRouteTypes {
     | '/bienvenue'
     | '/enfants'
     | '/foyer'
+    | '/hubs'
     | '/semaine'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -105,6 +115,7 @@ export interface FileRouteTypes {
     | '/bienvenue'
     | '/enfants'
     | '/foyer'
+    | '/hubs'
     | '/semaine'
   id:
     | '__root__'
@@ -115,6 +126,7 @@ export interface FileRouteTypes {
     | '/_authed/bienvenue'
     | '/_authed/enfants'
     | '/_authed/foyer'
+    | '/_authed/hubs'
     | '/_authed/semaine'
   fileRoutesById: FileRoutesById
 }
@@ -175,6 +187,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedFoyerRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/hubs': {
+      id: '/_authed/hubs'
+      path: '/hubs'
+      fullPath: '/hubs'
+      preLoaderRoute: typeof AuthedHubsRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/semaine': {
       id: '/_authed/semaine'
       path: '/semaine'
@@ -190,6 +209,7 @@ interface AuthedRouteChildren {
   AuthedBienvenueRoute: typeof AuthedBienvenueRoute
   AuthedEnfantsRoute: typeof AuthedEnfantsRoute
   AuthedFoyerRoute: typeof AuthedFoyerRoute
+  AuthedHubsRoute: typeof AuthedHubsRoute
   AuthedSemaineRoute: typeof AuthedSemaineRoute
 }
 
@@ -198,6 +218,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedBienvenueRoute: AuthedBienvenueRoute,
   AuthedEnfantsRoute: AuthedEnfantsRoute,
   AuthedFoyerRoute: AuthedFoyerRoute,
+  AuthedHubsRoute: AuthedHubsRoute,
   AuthedSemaineRoute: AuthedSemaineRoute,
 }
 

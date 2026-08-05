@@ -1457,7 +1457,18 @@ export type Database = {
       auth_admin_household_ids: { Args: never; Returns: string[] }
       auth_household_ids: { Args: never; Returns: string[] }
       auth_household_member_ids: { Args: never; Returns: string[] }
+      auth_hub_admin_ids: { Args: never; Returns: string[] }
       auth_hub_ids: { Args: never; Returns: string[] }
+      auth_hub_member_user_ids: { Args: never; Returns: string[] }
+      hub_for_join_code: {
+        Args: { p_code: string }
+        Returns: {
+          id: string
+          name: string
+          kind: Database["public"]["Enums"]["hub_kind"]
+          municipality: string
+        }[]
+      }
     }
     Enums: {
       channel_type: "cercle_intime" | "hub" | "broadcast_institutionnel"

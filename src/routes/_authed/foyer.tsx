@@ -345,6 +345,13 @@ function HouseholdScreen({
           >
             Voir la semaine et les trajets
           </Link>
+
+          <Link
+            to="/hubs"
+            className="mt-3 block w-full rounded-md border border-gray-300 px-4 py-2 text-center text-sm font-medium text-gray-700 hover:bg-gray-100"
+          >
+            Les hubs
+          </Link>
         </div>
 
         <button
