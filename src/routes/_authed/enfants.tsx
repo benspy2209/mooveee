@@ -16,6 +16,21 @@ interface Child {
 
 const CURRENT_YEAR = new Date().getFullYear()
 
+// Bucket privé (migration 0004). children.photo_url stocke le chemin
+// relatif {household_id}/{child_id}.{ext}, jamais une URL publique.
+const PHOTO_BUCKET = 'child-photos'
+const SIGNED_URL_TTL_SECONDS = 3600 // 1 h maximum
+
+// Validation côté client, par confort uniquement : la validation qui
+// fait autorité est côté serveur, via les contraintes du bucket
+// (allowed_mime_types jpeg/png/webp, file_size_limit 5 Mo — 0004).
+const PHOTO_EXTENSIONS: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+}
+const PHOTO_MAX_BYTES = 5 * 1024 * 1024
+
 export const Route = createFileRoute('/_authed/enfants')({
   component: EnfantsPage,
 })
@@ -28,6 +43,7 @@ function EnfantsPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [householdId, setHouseholdId] = useState<string | null>(null)
   const [children, setChildren] = useState<Array<Child>>([])
+  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({})
 
   const load = useCallback(async () => {
     if (!userId) return
@@ -64,8 +80,30 @@ function EnfantsPage() {
       return
     }
 
+    // URLs signées de courte durée, demandées UNIQUEMENT pour les
+    // enfants dont photo_consent est true. Sans consentement, aucune
+    // signature n'est même demandée (§9.2).
+    const consented = childrenData.filter(
+      (c) => c.photo_consent && c.photo_url,
+    )
+    const urls: Record<string, string> = {}
+    if (consented.length > 0) {
+      const { data: signed } = await supabase.storage
+        .from(PHOTO_BUCKET)
+        .createSignedUrls(
+          consented.map((c) => c.photo_url as string),
+          SIGNED_URL_TTL_SECONDS,
+        )
+      signed?.forEach((entry, index) => {
+        if (entry.signedUrl) {
+          urls[consented[index].id] = entry.signedUrl
+        }
+      })
+    }
+
     setHouseholdId(membership.household_id)
     setChildren(childrenData)
+    setPhotoUrls(urls)
     setLoading(false)
   }, [userId])
 
@@ -129,6 +167,7 @@ function EnfantsPage() {
     <ChildrenScreen
       householdId={householdId}
       children={children}
+      photoUrls={photoUrls}
       onChanged={() => void load()}
     />
   )
@@ -137,10 +176,12 @@ function EnfantsPage() {
 function ChildrenScreen({
   householdId,
   children,
+  photoUrls,
   onChanged,
 }: {
   householdId: string
   children: Array<Child>
+  photoUrls: Record<string, string>
   onChanged: () => void
 }) {
   const [adding, setAdding] = useState(false)
@@ -184,6 +225,7 @@ function ChildrenScreen({
                 <ChildRow
                   key={child.id}
                   child={child}
+                  photoUrl={photoUrls[child.id] ?? null}
                   onEdit={() => {
                     setAdding(false)
                     setEditingId(child.id)
@@ -225,10 +267,12 @@ function ChildrenScreen({
 
 function ChildRow({
   child,
+  photoUrl,
   onEdit,
   onDeleted,
 }: {
   child: Child
+  photoUrl: string | null
   onEdit: () => void
   onDeleted: () => void
 }) {
@@ -239,6 +283,21 @@ function ChildRow({
   async function handleDelete() {
     setError(null)
     setDeleting(true)
+
+    // Le cascade SQL ne supprime pas les objets Storage : suppression
+    // explicite du fichier AVANT la ligne, pour ne jamais laisser de
+    // photo orpheline en cas d'échec partiel.
+    if (child.photo_url) {
+      const { error: storageError } = await supabase.storage
+        .from(PHOTO_BUCKET)
+        .remove([child.photo_url])
+
+      if (storageError) {
+        setError(storageError.message)
+        setDeleting(false)
+        return
+      }
+    }
 
     const { error: deleteError } = await supabase
       .from('children')
@@ -254,17 +313,15 @@ function ChildRow({
     onDeleted()
   }
 
-  // Le consentement prime sur la présence d'une URL : jamais de photo
-  // affichée si photo_consent est false (§9.2).
-  const showPhoto = child.photo_consent && child.photo_url
-
+  // Le consentement prime : photoUrl (URL signée) n'existe que si
+  // photo_consent est true, la signature n'est jamais demandée sinon.
   return (
     <li className="py-3">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          {showPhoto ? (
+          {photoUrl ? (
             <img
-              src={child.photo_url ?? undefined}
+              src={photoUrl}
               alt={`Photo de ${child.first_name}`}
               className="h-10 w-10 rounded-full object-cover"
             />
@@ -327,7 +384,8 @@ function ChildRow({
 
       {confirmingDelete && (
         <p className="mt-2 rounded-md bg-red-50 p-3 text-sm text-red-800">
-          Supprimer {child.first_name} du foyer ? Cette action est définitive.
+          Supprimer {child.first_name} du foyer ? Sa photo éventuelle sera
+          aussi supprimée. Cette action est définitive.
         </p>
       )}
 
@@ -356,37 +414,135 @@ function ChildForm({
     child?.birth_year ? String(child.birth_year) : '',
   )
   const [boosterSeat, setBoosterSeat] = useState(child?.booster_seat ?? false)
-  const [photoUrl, setPhotoUrl] = useState(child?.photo_url ?? '')
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoConsent, setPhotoConsent] = useState(child?.photo_consent ?? false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Mémorise l'id créé pour ne pas insérer deux fois si l'upload de la
+  // photo échoue et que le formulaire est re-soumis.
+  const [createdChildId, setCreatedChildId] = useState<string | null>(null)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
+
+    if (photoFile) {
+      if (!photoConsent) {
+        setError(
+          'Pour enregistrer une photo, vous devez cocher la case de ' +
+            'consentement ci-dessous.',
+        )
+        return
+      }
+      if (!(photoFile.type in PHOTO_EXTENSIONS)) {
+        setError(
+          'Format non accepté. Formats autorisés : JPEG, PNG ou WebP.',
+        )
+        return
+      }
+      if (photoFile.size > PHOTO_MAX_BYTES) {
+        setError('La photo dépasse la taille maximale de 5 Mo.')
+        return
+      }
+    }
+
     setSubmitting(true)
 
     const values = {
       first_name: firstName.trim(),
       birth_year: birthYear === '' ? null : Number(birthYear),
       booster_seat: boosterSeat,
-      photo_url: photoUrl.trim() === '' ? null : photoUrl.trim(),
       photo_consent: photoConsent,
     }
 
-    const { error: submitError } = child
-      ? await supabase
-          .from('children')
-          .update({ ...values, updated_at: new Date().toISOString() })
-          .eq('id', child.id)
-      : await supabase
-          .from('children')
-          .insert({ ...values, household_id: householdId })
+    // 1. Ligne enfant (sans photo pour une création : le chemin de
+    //    stockage a besoin de l'id).
+    let childId = child?.id ?? createdChildId
+    if (!childId) {
+      const { data: created, error: insertError } = await supabase
+        .from('children')
+        .insert({ ...values, household_id: householdId })
+        .select('id')
+        .single()
 
-    if (submitError) {
-      setError(submitError.message)
-      setSubmitting(false)
-      return
+      if (insertError) {
+        setError(insertError.message)
+        setSubmitting(false)
+        return
+      }
+      childId = created.id
+      setCreatedChildId(created.id)
+    } else if (child) {
+      const { error: updateError } = await supabase
+        .from('children')
+        .update({ ...values, updated_at: new Date().toISOString() })
+        .eq('id', child.id)
+
+      if (updateError) {
+        setError(updateError.message)
+        setSubmitting(false)
+        return
+      }
+    }
+
+    // 2. Fichier dans Storage. Le cascade SQL ne touche pas aux objets
+    //    Storage : remplacement et retrait de consentement suppriment
+    //    explicitement l'ancien fichier.
+    const oldPath = child?.photo_url ?? null
+    let newPath = oldPath
+
+    if (!photoConsent && oldPath) {
+      // Consentement retiré : le fichier est supprimé, pas seulement masqué.
+      const { error: removeError } = await supabase.storage
+        .from(PHOTO_BUCKET)
+        .remove([oldPath])
+
+      if (removeError) {
+        setError(removeError.message)
+        setSubmitting(false)
+        return
+      }
+      newPath = null
+    } else if (photoFile) {
+      const extension = PHOTO_EXTENSIONS[photoFile.type]
+      newPath = `${householdId}/${childId}.${extension}`
+
+      const { error: uploadError } = await supabase.storage
+        .from(PHOTO_BUCKET)
+        .upload(newPath, photoFile, {
+          upsert: true,
+          contentType: photoFile.type,
+        })
+
+      if (uploadError) {
+        setError(
+          `La photo n’a pas pu être enregistrée : ${uploadError.message}. ` +
+            'Les autres informations ont bien été sauvegardées, vous pouvez ' +
+            'réessayer.',
+        )
+        setSubmitting(false)
+        return
+      }
+
+      // Extension différente = chemin différent : l'ancien fichier ne
+      // serait pas écrasé par l'upsert, on le supprime.
+      if (oldPath && oldPath !== newPath) {
+        await supabase.storage.from(PHOTO_BUCKET).remove([oldPath])
+      }
+    }
+
+    // 3. Chemin relatif en base (jamais d'URL publique).
+    if (newPath !== oldPath || !child) {
+      const { error: pathError } = await supabase
+        .from('children')
+        .update({ photo_url: newPath })
+        .eq('id', childId)
+
+      if (pathError) {
+        setError(pathError.message)
+        setSubmitting(false)
+        return
+      }
     }
 
     onDone()
@@ -450,18 +606,22 @@ function ChildForm({
 
       <div>
         <label
-          htmlFor={`${idPrefix}-photo-url`}
+          htmlFor={`${idPrefix}-photo`}
           className="block text-sm font-medium text-gray-700"
         >
-          Photo (URL, optionnelle)
+          Photo (optionnelle)
         </label>
         <input
-          id={`${idPrefix}-photo-url`}
-          type="url"
-          value={photoUrl}
-          onChange={(e) => setPhotoUrl(e.target.value)}
-          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          id={`${idPrefix}-photo`}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)}
+          className="mt-1 w-full text-sm text-gray-700 file:mr-3 file:rounded-md file:border file:border-gray-300 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-100"
         />
+        <p className="mt-1 text-xs text-gray-500">
+          JPEG, PNG ou WebP, 5 Mo maximum.
+          {child?.photo_url && ' La nouvelle photo remplacera l’actuelle.'}
+        </p>
       </div>
 
       <label className="flex items-start gap-2 text-sm text-gray-700">
@@ -472,9 +632,9 @@ function ChildForm({
           className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
         />
         <span>
-          J’autorise explicitement l’affichage de la photo de cet enfant dans
-          l’application. Sans cette autorisation, la photo ne sera jamais
-          affichée, même si une URL est renseignée.
+          J’autorise explicitement l’enregistrement et l’affichage de la photo
+          de cet enfant dans l’application. Si je retire cette autorisation, la
+          photo est supprimée.
         </span>
       </label>
 
