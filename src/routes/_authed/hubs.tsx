@@ -772,7 +772,7 @@ function HubTripCard({
               ? `Conduit par ${trip.driver_first_name}`
               : 'Conducteur non renseigné'}
             {' · '}
-            {seats} place{seats > 1 ? 's' : ''}
+            {seats} place{seats > 1 ? 's' : ''} offerte{seats > 1 ? 's' : ''}
             {' · '}
             {trip.children_count ?? 0} enfant
             {(trip.children_count ?? 0) > 1 ? 's' : ''} à bord

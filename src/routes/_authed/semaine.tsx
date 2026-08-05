@@ -1216,8 +1216,8 @@ function PublishSection({
             Publié vers « {publishedHub?.name ?? 'un hub'} » —{' '}
             {trip.seats_available ?? 0} place
             {(trip.seats_available ?? 0) > 1 ? 's' : ''} restante
-            {(trip.seats_available ?? 0) > 1 ? 's' : ''} sur{' '}
-            {trip.seats_total ?? 0}.
+            {(trip.seats_available ?? 0) > 1 ? 's' : ''} sur les{' '}
+            {trip.seats_total ?? 0} offertes aux autres familles.
           </p>
           <button
             type="button"
@@ -1260,7 +1260,7 @@ function PublishSection({
               htmlFor={`publish-seats-${trip.id}`}
               className="block text-sm font-medium text-gray-700"
             >
-              Places disponibles
+              Places offertes aux autres familles
             </label>
             <input
               id={`publish-seats-${trip.id}`}
