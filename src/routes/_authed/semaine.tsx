@@ -42,7 +42,18 @@ interface Trip {
 }
 
 const HOME_LABEL = 'Domicile'
-const GENERATION_WEEKS = 4
+
+const HORIZONS = [
+  { days: 28, label: '4 semaines' },
+  { days: 91, label: '3 mois' },
+  { days: 182, label: '6 mois' },
+  { days: 365, label: '1 an' },
+]
+const DEFAULT_HORIZON_DAYS = 91 // 3 mois
+
+// Taille des lots d'insertion : sur un an, une activité récurrente
+// représente une centaine de trajets — jamais une requête par trajet.
+const INSERT_BATCH_SIZE = 200
 
 // ---------------------------------------------------------------------
 // Fuseau : les heures sont stockées en UTC mais saisies en heure locale
@@ -357,6 +368,11 @@ function WeekScreen({
 }) {
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null)
   const [generating, setGenerating] = useState(false)
+  const [horizonDays, setHorizonDays] = useState(DEFAULT_HORIZON_DAYS)
+  const [generationProgress, setGenerationProgress] = useState<{
+    done: number
+    total: number
+  } | null>(null)
   const [generationMessage, setGenerationMessage] = useState<string | null>(null)
   const [generationError, setGenerationError] = useState<string | null>(null)
 
@@ -379,19 +395,23 @@ function WeekScreen({
 
   // -------------------------------------------------------------------
   // Génération des trajets : aller + retour par occurrence d'activité
-  // sur les quatre prochaines semaines. Les trajets déjà existants
-  // (même activité, même direction, même horaire) ne sont pas recréés :
-  // les annulations et attributions survivent à une régénération.
+  // sur l'horizon choisi. Idempotente à deux niveaux : dédup par clé
+  // (activité, direction, horaire) côté code, et ON CONFLICT DO NOTHING
+  // sur l'index unique trips_activity_occurrence_unique (0007) côté
+  // données. Les trajets existants ne sont JAMAIS écrasés : conducteurs
+  // attribués et occurrences annulées survivent à toute régénération,
+  // un horizon plus long n'ajoute que les occurrences manquantes.
   // -------------------------------------------------------------------
   async function generateTrips() {
     setGenerationError(null)
     setGenerationMessage(null)
+    setGenerationProgress(null)
     setGenerating(true)
 
     const now = new Date()
     const todayBxl = toBrusselsWallClock(now)
     const horizon = fromBrusselsWallClock(
-      addDays({ ...todayBxl, hh: 0, mm: 0 }, GENERATION_WEEKS * 7),
+      addDays({ ...todayBxl, hh: 0, mm: 0 }, horizonDays),
     )
 
     const [activitiesResult, existingResult] = await Promise.all([
@@ -486,7 +506,7 @@ function WeekScreen({
       const startWall = toBrusselsWallClock(new Date(activity.starts_at))
       const endWall = toBrusselsWallClock(new Date(endIso))
 
-      for (let i = 0; i < GENERATION_WEEKS * 7; i++) {
+      for (let i = 0; i < horizonDays; i++) {
         const day = addDays({ ...todayBxl, hh: 0, mm: 0 }, i)
         if (!days.includes(weekdayOf(day))) continue
         const startsAt = fromBrusselsWallClock({
@@ -510,15 +530,41 @@ function WeekScreen({
       return
     }
 
-    const { data: inserted, error: insertError } = await supabase
-      .from('trips')
-      .insert(newTrips)
-      .select('id, activity_id, direction, scheduled_at')
+    // Insertion par lots. upsert + ignoreDuplicates = ON CONFLICT DO
+    // NOTHING sur l'index unique : seuls les trajets réellement créés
+    // sont renvoyés, les existants ne sont pas touchés.
+    setGenerationProgress({ done: 0, total: newTrips.length })
+    const inserted: Array<{
+      id: string
+      activity_id: string | null
+      direction: TripDirection
+      scheduled_at: string
+    }> = []
 
-    if (insertError || !inserted) {
-      setGenerationError(insertError?.message ?? 'Réponse inattendue du serveur')
-      setGenerating(false)
-      return
+    for (let i = 0; i < newTrips.length; i += INSERT_BATCH_SIZE) {
+      const batch = newTrips.slice(i, i + INSERT_BATCH_SIZE)
+      const { data: batchInserted, error: insertError } = await supabase
+        .from('trips')
+        .upsert(batch, {
+          onConflict: 'activity_id,direction,scheduled_at',
+          ignoreDuplicates: true,
+        })
+        .select('id, activity_id, direction, scheduled_at')
+
+      if (insertError || !batchInserted) {
+        setGenerationError(
+          insertError?.message ?? 'Réponse inattendue du serveur',
+        )
+        setGenerating(false)
+        setGenerationProgress(null)
+        return
+      }
+
+      inserted.push(...batchInserted)
+      setGenerationProgress({
+        done: Math.min(i + INSERT_BATCH_SIZE, newTrips.length),
+        total: newTrips.length,
+      })
     }
 
     const links = inserted.flatMap((trip) => {
@@ -527,22 +573,28 @@ function WeekScreen({
       return childId ? [{ trip_id: trip.id, child_id: childId }] : []
     })
 
-    if (links.length > 0) {
+    for (let i = 0; i < links.length; i += INSERT_BATCH_SIZE) {
       const { error: linkError } = await supabase
         .from('trip_children')
-        .insert(links)
+        .insert(links.slice(i, i + INSERT_BATCH_SIZE))
 
       if (linkError) {
         setGenerationError(linkError.message)
         setGenerating(false)
+        setGenerationProgress(null)
         return
       }
     }
 
+    const horizonLabel =
+      HORIZONS.find((h) => h.days === horizonDays)?.label ?? `${horizonDays} jours`
     setGenerationMessage(
-      `${inserted.length} trajet${inserted.length > 1 ? 's' : ''} créé${inserted.length > 1 ? 's' : ''} sur les ${GENERATION_WEEKS} prochaines semaines.`,
+      inserted.length === 0
+        ? 'Tout est à jour : aucun nouveau trajet à créer.'
+        : `${inserted.length} trajet${inserted.length > 1 ? 's' : ''} créé${inserted.length > 1 ? 's' : ''} sur ${horizonLabel}.`,
     )
     setGenerating(false)
+    setGenerationProgress(null)
     onChanged()
   }
 
@@ -601,16 +653,36 @@ function WeekScreen({
               </button>
             </div>
             <p className="text-sm font-medium text-gray-700">{rangeLabel}</p>
-            <button
-              type="button"
-              onClick={() => void generateTrips()}
-              disabled={generating}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {generating
-                ? 'Génération…'
-                : 'Générer les trajets (4 semaines)'}
-            </button>
+            <div className="flex items-center gap-2">
+              <label htmlFor="generation-horizon" className="sr-only">
+                Horizon de génération
+              </label>
+              <select
+                id="generation-horizon"
+                value={horizonDays}
+                disabled={generating}
+                onChange={(e) => setHorizonDays(Number(e.target.value))}
+                className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                {HORIZONS.map((h) => (
+                  <option key={h.days} value={h.days}>
+                    {h.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => void generateTrips()}
+                disabled={generating}
+                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {generating
+                  ? generationProgress
+                    ? `Génération… ${generationProgress.done}/${generationProgress.total}`
+                    : 'Génération…'
+                  : 'Générer les trajets'}
+              </button>
+            </div>
           </div>
 
           {generationMessage && (

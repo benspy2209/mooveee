@@ -711,6 +711,7 @@ function ActivityForm({
           <input
             id={`${idPrefix}-start`}
             type="time"
+            step={900}
             required
             value={startTime}
             onChange={(e) => setStartTime(e.target.value)}
@@ -727,6 +728,7 @@ function ActivityForm({
           <input
             id={`${idPrefix}-end`}
             type="time"
+            step={900}
             required
             value={endTime}
             onChange={(e) => setEndTime(e.target.value)}
