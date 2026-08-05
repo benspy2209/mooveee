@@ -13,3 +13,5 @@ __unconfig*
 todos.json
 
 supabase/.temp
+.env.local
+.env.*.local
