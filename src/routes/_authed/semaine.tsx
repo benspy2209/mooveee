@@ -343,6 +343,11 @@ function SemainePage() {
         setWeekOffset((o) => o + 1)
       }}
       onChanged={() => void load()}
+      onTripPatched={(tripId, patch) =>
+        setTrips((current) =>
+          current.map((t) => (t.id === tripId ? { ...t, ...patch } : t)),
+        )
+      }
     />
   )
 }
@@ -356,6 +361,7 @@ function WeekScreen({
   onPreviousWeek,
   onNextWeek,
   onChanged,
+  onTripPatched,
 }: {
   householdId: string
   childrenList: Array<ChildOption>
@@ -365,6 +371,7 @@ function WeekScreen({
   onPreviousWeek: () => void
   onNextWeek: () => void
   onChanged: () => void
+  onTripPatched: (tripId: string, patch: Partial<Trip>) => void
 }) {
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null)
   const [generating, setGenerating] = useState(false)
@@ -843,6 +850,7 @@ function WeekScreen({
                   : null
               }
               onChanged={onChanged}
+              onPatched={(patch) => onTripPatched(selectedTrip.id, patch)}
               onClose={() => setSelectedTripId(null)}
             />
           )}
@@ -857,18 +865,28 @@ function TripDetail({
   members,
   childName,
   onChanged,
+  onPatched,
   onClose,
 }: {
   trip: Trip
   members: Array<Member>
   childName: string | null
   onChanged: () => void
+  onPatched: (patch: Partial<Trip>) => void
   onClose: () => void
 }) {
   const [driverId, setDriverId] = useState(trip.driver_id ?? '')
   const [saving, setSaving] = useState(false)
   const [confirmingCancel, setConfirmingCancel] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [onClose])
 
   const wall = toBrusselsWallClock(new Date(trip.scheduled_at))
   const dateLabel = new Date(trip.scheduled_at).toLocaleDateString('fr-BE', {
@@ -901,6 +919,11 @@ function TripDetail({
     }
 
     setSaving(false)
+    // Mise à jour immédiate de la grille, refetch en arrière-plan.
+    onPatched({
+      driver_id: newDriverId === '' ? null : newDriverId,
+      status: newDriverId === '' ? 'non_couvert' : 'couvert',
+    })
     onChanged()
   }
 
@@ -924,12 +947,23 @@ function TripDetail({
 
     setSaving(false)
     setConfirmingCancel(false)
+    onPatched({ status })
     onChanged()
   }
 
   return (
-    <div className="mt-4 rounded-md border border-gray-200 bg-gray-50 p-4">
-      <div className="flex items-start justify-between gap-3">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Détail du trajet"
+    >
+      <div
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-gray-900">
             {trip.activities?.label ?? 'Trajet'} —{' '}
@@ -1023,11 +1057,12 @@ function TripDetail({
         )}
       </div>
 
-      {error && (
-        <p className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-800">
-          Une erreur est survenue : {error}
-        </p>
-      )}
+        {error && (
+          <p className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-800">
+            Une erreur est survenue : {error}
+          </p>
+        )}
+      </div>
     </div>
   )
 }
