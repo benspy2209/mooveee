@@ -31,10 +31,16 @@ fonctionnalité, jamais l'inverse.
 Variables d'environnement : dashboard Vercel et `.env.local`. Jamais dans le
 repo. Ne jamais préfixer une clé `service_role` par `VITE_`.
 
-**Point ouvert** : le scaffold builde en SSR. Le Doc1 décrit une app mobile
-avec notifications push, ce qui suppose un encapsulage Capacitor et donc un
-build SPA. Décision non prise. Éviter d'introduire des dépendances au rendu
-serveur au runtime tant que ce n'est pas tranché.
+**Mode SPA — tranché (août 2026)** : `tanstackStart` est configuré en
+`spa` (enabled, `maskPath` racine, prerender sans crawl) dans
+`vite.config.ts`. Le build produit `.output/public/_shell.html` en plus du
+serveur Nitro : l'application tourne validée en statique pur, routage
+client compris, encapsulable par Capacitor pour l'App Store.
+
+**Règle** : n'introduire aucune dépendance au rendu serveur au runtime
+dans les étapes suivantes. Pas de loader serveur, pas de server function,
+pas d'API route nécessaire au fonctionnement : tout passe par Supabase
+depuis le client.
 
 ---
 
