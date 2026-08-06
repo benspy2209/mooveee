@@ -82,6 +82,77 @@ qu'il faut revoir. Signaler, ne pas contourner.
 
 ---
 
+## Règles de sécurité apprises en construisant
+
+Cinq failles réelles ont été trouvées et fermées pendant le développement.
+Chacune donne une règle générale. Les relire avant d'écrire une policy.
+
+### Une RLS filtre les LIGNES, jamais les COLONNES
+
+`users_hub_select` autorisait la lecture de la ligne entière de `users` à
+tout co-membre de hub : téléphone et code postal accessibles par un simple
+`select *`. Acceptable dans un foyer, jamais dans un hub.
+
+**Règle** : dès qu'une table contient des colonnes sensibles et doit être
+lue par un cercle plus large que son propriétaire, passer par une fonction
+`security definer` qui choisit ses colonnes. Jamais une policy `select`.
+
+Fonctions existantes de ce type : `hub_member_profiles(hub_id)`,
+`hub_user_first_name(user_id)`, `hub_trip_children_count(trip_id)`.
+
+### `security_invoker` sur une vue propage la RLS de l'appelant
+
+`hub_trips_view` comptait les enfants avec un sous-select sur
+`trip_children`, exécuté avec les droits de l'appelant, qui ne voit que son
+propre foyer. Tous les membres du hub voyaient « 0 enfant à bord ».
+
+**Règle** : dans une vue `security_invoker`, tout sous-select subit la RLS
+de l'appelant. Un agrégat qui doit traverser les cercles passe par une
+fonction `security definer`. Un COMPTE n'expose aucune identité, contrairement
+à un élargissement de policy.
+
+### Une policy d'auto-insertion doit verrouiller les colonnes de privilège
+
+`hub_members_self_insert` permettait de s'insérer avec `is_admin = true` et
+`validated_at` rempli : n'importe qui avec un code d'adhésion devenait admin
+validé du hub.
+
+**Règle** : toute policy `insert` où l'utilisateur s'inscrit lui-même doit
+contraindre explicitement les colonnes de privilège et de validation dans
+son `with check`. Le bootstrap du créateur est la seule exception, et elle
+se vérifie contre `owner_id`.
+
+### Une contrainte se resserre par élargissement, jamais par suppression
+
+`trip_children_household_match` bloquait l'acceptation d'une demande de hub,
+un enfant accepté venant par construction d'un autre foyer. La supprimer
+aurait rouvert la faille qu'elle ferme : rattacher n'importe quel enfant à
+n'importe quel trajet avec un simple UUID.
+
+**Règle** : quand une contrainte bloque un cas légitime, ajouter une
+alternative vérifiée (`or fonction_qui_valide_le_nouveau_cas(...)`), jamais
+un `drop`. Voir `trip_child_hub_request_accepted`.
+
+### RLS activée sans policy = table muette
+
+Cinq tables avaient la RLS activée dans le schéma initial sans aucune
+policy : `activities`, `trip_children`, `hub_pact_acceptances`, et les
+opérations `update`/`delete` sur `hub_members`. Comportement deny by default
+correct, mais fonctionnalité invisible jusqu'au premier test.
+
+**Règle** : toute nouvelle table arrive avec ses policies dans la même
+migration. Avant de livrer un écran, vérifier que chaque table touchée a bien
+une policy pour chaque opération utilisée.
+
+### Récursion de policy
+
+Utiliser les helpers `security definer` : `auth_household_ids()`,
+`auth_hub_ids()`, `auth_admin_household_ids()`, `auth_household_member_ids()`,
+`auth_hub_admin_ids()`, `auth_hub_member_user_ids()`. Ne jamais écrire une
+policy qui interroge directement la table qu'elle protège.
+
+---
+
 ## Mooves : gain, dépense, influence
 
 La Note d'arbitrage §5 est la source de vérité. Distinction structurante :
@@ -176,23 +247,47 @@ gagner, dépenser.
 **À utiliser** : niveau de contribution, équilibre d'entraide, aide
 apportée, aide reçue, dynamique de participation.
 
+Vocabulaire retenu et à conserver : « En démarrage » pour un hub solo,
+« Places offertes aux autres familles » pour `seats_available`.
+
 Ne s'applique pas aux noms de tables et colonnes, où `mooves_balance` et
 `mooves_ledger` restent appropriés.
 
 ---
 
+## Sémantique métier tranchée
+
+**`seats_available`** = places offertes aux autres familles. Le parent
+déclare ce qu'il offre. L'application ne connaît pas la capacité de sa
+voiture et ne fait aucune soustraction. Les enfants du conducteur sont
+comptés séparément dans `children_count`.
+
+**Génération de trajets.** Idempotente par index unique
+`(activity_id, direction, scheduled_at)` + `ON CONFLICT DO NOTHING`. Une
+régénération n'ajoute que le manquant : conducteurs attribués et occurrences
+annulées ne sont jamais écrasés. Le rattachement de l'enfant de l'activité
+dans `trip_children` est refait à chaque génération, ce qui sert aussi de
+rattrapage.
+
+**Fuseau horaire.** Les heures sont en UTC en base, saisies en heure locale
+belge. Le calcul des occurrences récurrentes se fait en `Europe/Brussels`,
+jamais par addition de 7 jours sur un timestamp UTC. Testé aux deux
+changements d'heure : un tennis à 16h reste à 16h toute l'année.
+
+---
+
 ## RGPD et sécurité
 
-- RLS activée sur toutes les tables, deny by default. Toute nouvelle table
-  arrive avec ses policies dans la même migration.
-- Utiliser les helpers `auth_household_ids()`, `auth_hub_ids()`,
-  `auth_admin_household_ids()` et `auth_household_member_ids()` pour éviter
-  la récursion de policies. Ne jamais écrire une policy qui interroge
-  directement la table qu'elle protège.
+- RLS activée sur toutes les tables, deny by default.
 - L'entrée dans un foyer est un acte volontaire. Un admin gère les membres
   existants mais n'en ajoute jamais d'autorité.
 - Prénom enfant stocké une seule fois, référencé partout par clé étrangère.
-- Photo enfant servie uniquement si `photo_consent = true`.
+- Photos enfants : bucket `child-photos` **privé**, jamais public. Chemin
+  `{household_id}/{child_id}.{ext}`, policies Storage sur le premier segment.
+  Affichage par URL signée d'une heure maximum, générée uniquement si
+  `photo_consent = true`. La suppression du fichier est **explicite** côté
+  application au retrait du consentement, au remplacement et à la suppression
+  de l'enfant : le cascade SQL ne supprime pas les objets Storage.
 - Rapport agrégé jamais généré sous
   `app_settings.reidentification_min_families`.
 - Institutions : accès aux vues agrégées uniquement, jamais au nominatif.
@@ -217,7 +312,7 @@ Ne pas coder de pourcentage fixe d'automatisation.
 
 ---
 
-## Git
+## Git et migrations
 
 - `user.email debruijneb@gmail.com`, `user.name benspy2209`.
 - Jamais `git add -A` ni `git add .`. Fichiers ajoutés explicitement.
@@ -226,27 +321,47 @@ Ne pas coder de pourcentage fixe d'automatisation.
 - Migrations versionnées dans `supabase/migrations/`. Rédigées par l'agent,
   **appliquées par Ben uniquement**. Ne jamais lancer `supabase db push`.
 - Toute migration doit être idempotente (`drop policy if exists`,
-  `create table if not exists`).
+  `create table if not exists`, `create or replace function`).
+- Un seul fichier par numéro de migration. Vérifier le nom exact avant tout
+  ajout en fin de fichier.
 - Génération de fichier : toujours `commande > /tmp/x && mv /tmp/x cible`.
   Une redirection simple détruit la cible avant de savoir si la commande
   réussit.
+- Régénérer les types après chaque migration appliquée.
 
 ---
 
 ## Séquence de développement
 
-1. ~~Modèle de données + RLS de premier niveau~~ — fait
-2. ~~Cercle intime : auth, profil, foyer, membres~~ — fait
-3. **Enfants et activités** — en cours
-4. Trajets internes au foyer, vue Semaine
-5. Statuts de hub et transition solo vers active
-6. Lien filtré cercle intime vers hub
-7. Système Mooves, sans aucune brique de paiement
+1. ~~Modèle de données + RLS de premier niveau~~
+2. ~~Cercle intime : auth magic link, profil, foyer, membres, invitations~~
+3. ~~Enfants (photos Storage privé) et activités (rrule)~~
+4. ~~Trajets, génération jusqu'à 1 an, vue Semaine, attribution, annulation~~
+5. ~~Hubs : création, code, adhésion, pacte, publication, demandes de place~~
+6. **Mooves** — ledger, solde, indice d'équilibre privé, fonds de solidarité
+7. Matching Macarons 3D, explication en 3 points
 8. Sécurité enfant : bulletin de trajet, meeting points, fenêtre de confiance
 9. Mode Concierge, automatisations de base
 10. Métriques institutionnelles, sans facturation automatique
 11. Module défraiement, développé non activé
-12. RLS complet, seuil de réidentification, test d'effacement
+12. Audit RLS complet, seuil de réidentification, test d'effacement
 
 Rien ne va en pilote avec de vraies familles avant l'étape 12 et la
 validation de la DPIA.
+
+---
+
+## Dette identifiée, à traiter à l'étape 12
+
+- **`private_note` lisible côté hub.** `trips_hub_select` autorise la lecture
+  des trajets publiés, et une RLS ne filtre pas les colonnes : un membre du
+  hub peut lire `private_note` par un select direct sur `trips`. La
+  discipline tient au code, pas à la base. À corriger par déplacement du
+  champ dans une table séparée ou par restriction de la policy.
+- **Invitations de foyer** : créent une ligne mais n'envoient aucun email et
+  n'ont pas de parcours d'acceptation.
+- **Garde alternée** : un enfant ne peut appartenir qu'à un seul foyer. Le
+  Doc1 évoque le cas, le schéma ne le permet pas. Les contraintes `check` ne
+  se réévaluent pas si un enfant change de foyer.
+- **Audit systématique** : lister toutes les tables avec RLS activée et
+  aucune policy, avant le pilote.
