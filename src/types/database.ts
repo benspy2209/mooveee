@@ -1483,6 +1483,10 @@ export type Database = {
     }
     Functions: {
       accept_trip_request: { Args: { p_request: string }; Returns: undefined }
+      hub_trip_matching_needs_count: {
+        Args: { p_trip: string }
+        Returns: number
+      }
       auth_admin_household_ids: { Args: never; Returns: string[] }
       auth_household_ids: { Args: never; Returns: string[] }
       auth_household_member_ids: { Args: never; Returns: string[] }

@@ -1142,8 +1142,28 @@ function PublishSection({
   const [seats, setSeats] = useState('2')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [needsCount, setNeedsCount] = useState<number | null>(null)
 
   const publishedHub = myHubs.find((h) => h.id === trip.hub_id)
+
+  // Combien de familles du hub ont un besoin correspondant ? Un COMPTE,
+  // jamais une liste ni un nom (fonction 0012). Purement informatif :
+  // rien n'est réservé, chaque famille décide de demander.
+  useEffect(() => {
+    if (!trip.published_to_hub) {
+      setNeedsCount(null)
+      return
+    }
+    let cancelled = false
+    void supabase
+      .rpc('hub_trip_matching_needs_count', { p_trip: trip.id })
+      .then(({ data }) => {
+        if (!cancelled && typeof data === 'number') setNeedsCount(data)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [trip.id, trip.published_to_hub])
 
   async function publish() {
     setError(null)
@@ -1219,6 +1239,14 @@ function PublishSection({
             {(trip.seats_available ?? 0) > 1 ? 's' : ''} sur les{' '}
             {trip.seats_total ?? 0} offertes aux autres familles.
           </p>
+          {needsCount !== null && needsCount > 0 && (
+            <p className="mt-1 text-sm text-blue-700">
+              {needsCount} famille{needsCount > 1 ? 's' : ''} du hub{' '}
+              {needsCount > 1 ? 'ont' : 'a'} un besoin proche de ce trajet
+              (même jour, horaire et lieu similaires). Elles ne sont pas
+              nommées : chacune décide d’envoyer une demande.
+            </p>
+          )}
           <button
             type="button"
             onClick={() => void unpublish()}

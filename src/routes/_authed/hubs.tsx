@@ -95,6 +95,105 @@ function formatTripDate(iso: string): string {
   })
 }
 
+// ---------------------------------------------------------------------
+// Matching « Macarons » sans distance (Doc1 §7 partiel) : les lieux
+// sont des libellés texte, la dimension distance est inapplicable.
+// Dimensions retenues : même jour, fenêtre horaire, correspondance de
+// libellé, même hub. Le matching PROPOSE, il n'assigne jamais
+// (interdit n°4) : aucune demande créée, aucune place réservée.
+// Fenêtre alignée sur hub_trip_matching_needs_count (0012).
+// ---------------------------------------------------------------------
+const MATCH_WINDOW_MINUTES = 90
+
+function normalizeLabel(value: string | null): string {
+  return (value ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function labelMatch(
+  a: string | null,
+  b: string | null,
+): 'identique' | 'similaire' | null {
+  const na = normalizeLabel(a)
+  const nb = normalizeLabel(b)
+  if (!na || !nb) return null
+  if (na === nb) return 'identique'
+  if (na.includes(nb) || nb.includes(na)) return 'similaire'
+  const ta = new Set(na.split(' ').filter((w) => w.length > 2))
+  const tb = new Set(nb.split(' ').filter((w) => w.length > 2))
+  const overlap = [...ta].filter((w) => tb.has(w)).length
+  if (overlap > 0 && overlap >= Math.min(ta.size, tb.size) / 2) {
+    return 'similaire'
+  }
+  return null
+}
+
+function brusselsDay(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-CA', {
+    timeZone: 'Europe/Brussels',
+  })
+}
+
+function brusselsTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('fr-BE', {
+    timeZone: 'Europe/Brussels',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+// Trajet non couvert de MON foyer : le besoin auquel une suggestion
+// répond. Lecture directe de trips légitime (cercle intime).
+interface MyNeed {
+  id: string
+  direction: Database['public']['Enums']['trip_direction']
+  scheduled_at: string
+  origin_label: string | null
+  destination_label: string | null
+}
+
+interface Suggestion {
+  trip: HubTripRow
+  need: MyNeed
+  delta: number
+  match: 'identique' | 'similaire'
+}
+
+function compareSuggestions(a: Suggestion, b: Suggestion): number {
+  // 1. Correspondance de lieu (identique avant similaire),
+  // 2. écart de temps croissant.
+  // Signal secondaire Mooves (Note d'arbitrage §5.5) : il ne peut que
+  // départager deux suggestions COMPARABLES, jamais filtrer ni masquer.
+  // Pour un même demandeur, son niveau de contribution est constant :
+  // à compatibilité égale l'ordre reste chronologique. Aucun chiffre
+  // de Mooves n'apparaît nulle part.
+  if (a.match !== b.match) return a.match === 'identique' ? -1 : 1
+  if (a.delta !== b.delta) return a.delta - b.delta
+  return (a.trip.scheduled_at ?? '').localeCompare(b.trip.scheduled_at ?? '')
+}
+
+// Trois points d'explication, pas de score chiffré affiché.
+function suggestionReasons(s: Suggestion): Array<string> {
+  const placeTrip =
+    s.trip.direction === 'aller' ? s.trip.destination_label : s.trip.origin_label
+  const placeNeed =
+    s.trip.direction === 'aller' ? s.need.destination_label : s.need.origin_label
+  const kind = s.trip.direction === 'aller' ? 'Destination' : 'Lieu de départ'
+  return [
+    `Même jour que votre trajet non couvert : départ à ${brusselsTime(s.trip.scheduled_at ?? s.need.scheduled_at)}, votre besoin à ${brusselsTime(s.need.scheduled_at)}`,
+    s.match === 'identique'
+      ? `${kind} identique : « ${placeTrip} »`
+      : `${kind} proche : « ${placeTrip} » et « ${placeNeed} »`,
+    s.delta === 0
+      ? 'Aucun écart d’horaire avec votre besoin'
+      : `Écart de ${s.delta} minute${s.delta > 1 ? 's' : ''} par rapport à votre besoin`,
+  ]
+}
+
 interface HubDetailData {
   id: string
   name: string
@@ -471,6 +570,7 @@ function HubDetail({
   const [members, setMembers] = useState<Array<HubMemberProfile>>([])
   const [threshold, setThreshold] = useState<number | null>(null)
   const [openTrips, setOpenTrips] = useState<Array<HubTripRow>>([])
+  const [myNeeds, setMyNeeds] = useState<Array<MyNeed>>([])
   const [myUserIds, setMyUserIds] = useState<Array<string>>([])
   const [myChildren, setMyChildren] = useState<Array<{ id: string; first_name: string }>>([])
   const [activationBanner, setActivationBanner] = useState(false)
@@ -484,6 +584,7 @@ function HubDetail({
       membersResult,
       thresholdResult,
       openTripsResult,
+      myNeedsResult,
       myMembersResult,
       myChildrenResult,
     ] = await Promise.all([
@@ -509,6 +610,15 @@ function HubDetail({
         .eq('status', 'couvert_ouvert')
         .gt('scheduled_at', new Date().toISOString())
         .order('scheduled_at'),
+      // Mes propres trajets non couverts (cercle intime, lecture
+      // directe légitime) : les besoins que les suggestions comparent.
+      supabase
+        .from('trips')
+        .select('id, direction, scheduled_at, origin_label, destination_label')
+        .eq('household_id', householdId)
+        .eq('status', 'non_couvert')
+        .gt('scheduled_at', new Date().toISOString())
+        .order('scheduled_at'),
       supabase
         .from('household_members')
         .select('user_id')
@@ -525,6 +635,7 @@ function HubDetail({
       membersResult.error ??
       thresholdResult.error ??
       openTripsResult.error ??
+      myNeedsResult.error ??
       myMembersResult.error ??
       myChildrenResult.error
     if (
@@ -532,6 +643,7 @@ function HubDetail({
       !hubResult.data ||
       !membersResult.data ||
       !openTripsResult.data ||
+      !myNeedsResult.data ||
       !myMembersResult.data ||
       !myChildrenResult.data
     ) {
@@ -556,6 +668,7 @@ function HubDetail({
       thresholdResult.data ? Number(thresholdResult.data.value) : null,
     )
     setOpenTrips(openTripsResult.data)
+    setMyNeeds(myNeedsResult.data)
     setMyUserIds(myMembersResult.data.map((m) => m.user_id))
     setMyChildren(myChildrenResult.data)
     setLoading(false)
@@ -587,6 +700,41 @@ function HubDetail({
   const pendingMembers = members.filter((m) => !m.validated_at)
   const missing =
     threshold !== null ? Math.max(0, threshold - validatedMembers.length) : null
+
+  // « Par les autres familles » : les trajets de mon propre foyer
+  // (conducteur dans mon foyer) sont exclus.
+  const otherTrips = openTrips.filter(
+    (t) => !t.driver_id || !myUserIds.includes(t.driver_id),
+  )
+
+  // Suggestions : meilleur besoin du foyer pour chaque trajet ouvert.
+  const suggestions: Array<Suggestion> = []
+  for (const t of otherTrips) {
+    if (!t.scheduled_at || !t.direction) continue
+    let best: Suggestion | null = null
+    for (const need of myNeeds) {
+      if (need.direction !== t.direction) continue
+      if (brusselsDay(need.scheduled_at) !== brusselsDay(t.scheduled_at)) {
+        continue
+      }
+      const delta = Math.round(
+        Math.abs(
+          new Date(t.scheduled_at).getTime() -
+            new Date(need.scheduled_at).getTime(),
+        ) / 60000,
+      )
+      if (delta > MATCH_WINDOW_MINUTES) continue
+      const match = labelMatch(
+        t.direction === 'aller' ? t.destination_label : t.origin_label,
+        t.direction === 'aller' ? need.destination_label : need.origin_label,
+      )
+      if (!match) continue
+      const candidate: Suggestion = { trip: t, need, delta, match }
+      if (!best || compareSuggestions(candidate, best) < 0) best = candidate
+    }
+    if (best) suggestions.push(best)
+  }
+  suggestions.sort(compareSuggestions)
 
   return (
     <div className="rounded-lg bg-white p-8 shadow">
@@ -667,38 +815,54 @@ function HubDetail({
         </>
       )}
 
-      <h3 className="mt-6 text-sm font-medium text-gray-700">
-        Trajets ouverts des autres familles
-      </h3>
-      {(() => {
-        // « Par les autres familles » : les trajets de mon propre foyer
-        // (conducteur dans mon foyer) sont exclus de cette liste.
-        const otherTrips = openTrips.filter(
-          (t) => !t.driver_id || !myUserIds.includes(t.driver_id),
-        )
-        if (otherTrips.length === 0) {
-          return (
-            <p className="mt-2 text-sm text-gray-500">
-              Aucun trajet ouvert pour le moment. Les trajets publiés par les
-              autres familles du hub apparaîtront ici.
-            </p>
-          )
-        }
-        return (
+      {suggestions.length > 0 && (
+        <>
+          <h3 className="mt-6 text-sm font-medium text-gray-700">
+            Suggestions pour votre foyer
+          </h3>
+          <p className="mt-1 text-xs text-gray-500">
+            Ces trajets correspondent à un besoin réel de votre foyer. Rien
+            n’est réservé automatiquement : vous choisissez de demander, le
+            conducteur choisit d’accepter.
+          </p>
           <ul className="mt-2 divide-y divide-gray-100">
-            {otherTrips.map((t) => (
+            {suggestions.map((s) => (
               <HubTripCard
-                key={t.id}
-                trip={t}
+                key={`suggestion-${s.trip.id}`}
+                trip={s.trip}
                 userId={userId}
                 householdId={householdId}
                 myChildren={myChildren}
+                reasons={suggestionReasons(s)}
                 onRequested={load}
               />
             ))}
           </ul>
-        )
-      })()}
+        </>
+      )}
+
+      <h3 className="mt-6 text-sm font-medium text-gray-700">
+        Trajets ouverts des autres familles
+      </h3>
+      {otherTrips.length === 0 ? (
+        <p className="mt-2 text-sm text-gray-500">
+          Aucun trajet ouvert pour le moment. Les trajets publiés par les
+          autres familles du hub apparaîtront ici.
+        </p>
+      ) : (
+        <ul className="mt-2 divide-y divide-gray-100">
+          {otherTrips.map((t) => (
+            <HubTripCard
+              key={t.id}
+              trip={t}
+              userId={userId}
+              householdId={householdId}
+              myChildren={myChildren}
+              onRequested={load}
+            />
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
@@ -708,12 +872,14 @@ function HubTripCard({
   userId,
   householdId,
   myChildren,
+  reasons,
   onRequested,
 }: {
   trip: HubTripRow
   userId: string
   householdId: string
   myChildren: Array<{ id: string; first_name: string }>
+  reasons?: Array<string>
   onRequested: () => void
 }) {
   const [open, setOpen] = useState(false)
@@ -777,6 +943,13 @@ function HubTripCard({
             {trip.children_count ?? 0} enfant
             {(trip.children_count ?? 0) > 1 ? 's' : ''} à bord
           </p>
+          {reasons && (
+            <ul className="mt-2 space-y-0.5 rounded-md bg-blue-50 p-2 text-xs text-blue-900">
+              {reasons.map((reason, i) => (
+                <li key={i}>• {reason}</li>
+              ))}
+            </ul>
+          )}
         </div>
         {!open && !sent && (
           <button
