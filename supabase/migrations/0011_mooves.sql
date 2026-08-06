@@ -212,3 +212,28 @@ drop trigger if exists trg_solidarity_grant_apply on solidarity_fund_grants;
 create trigger trg_solidarity_grant_apply
 after insert on solidarity_fund_grants
 for each row execute function solidarity_grant_apply();
+
+-- --- 5. VERROU : fonctions internes non appelables par un client -----
+-- Toute fonction du schema public est exposee via PostgREST. Une
+-- fonction SECURITY DEFINER qui ecrit dans le ledger et que n importe
+-- quel utilisateur authentifie peut appeler avec son propre user_id et
+-- le montant de son choix annule tout le raisonnement du deny by
+-- default : ce n est pas un achat, c est un auto-credit direct.
+--
+-- Ces fonctions restent appelables par accept_trip_request et par le
+-- trigger de solidarite, eux-memes SECURITY DEFINER : la revocation
+-- ne concerne que l appel depuis l API.
+
+revoke execute on function mooves_apply_movement(
+  uuid, moove_movement, integer, uuid, uuid, text)
+  from public, anon, authenticated;
+
+revoke execute on function mooves_amount_for_distance(numeric)
+  from public, anon, authenticated;
+
+revoke execute on function solidarity_grant_apply()
+  from public, anon, authenticated;
+
+-- Les helpers RLS n ont pas non plus a etre appelables directement.
+revoke execute on function hub_trip_children_count(uuid)
+  from public, anon;

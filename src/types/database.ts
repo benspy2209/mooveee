@@ -1512,7 +1512,20 @@ export type Database = {
           validated_at: string
         }[]
       }
+      hub_trip_children_count: { Args: { p_trip: string }; Returns: number }
       hub_user_first_name: { Args: { p_user: string }; Returns: string }
+      mooves_amount_for_distance: { Args: { p_km: number }; Returns: number }
+      mooves_apply_movement: {
+        Args: {
+          p_amount: number
+          p_grant?: string
+          p_movement: Database["public"]["Enums"]["moove_movement"]
+          p_reason?: string
+          p_trip?: string
+          p_user: string
+        }
+        Returns: undefined
+      }
       trip_child_household_match: {
         Args: { p_child: string; p_trip: string }
         Returns: boolean

@@ -126,11 +126,40 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   offertes aux autres familles », aucun calcul, labels renommés dans
   la modale de publication et la liste hub (fbc8d5c).
 
+- 06/08 : système Mooves (aae259c), étape 7 :
+  - Migration 0010 (NON APPLIQUÉE, Ben pousse) : barème
+    mooves_distance_scale dans app_settings (30/40/50/60/70, paliers
+    3/6/10/15 km, on conflict do nothing) ; mooves_amount_for_distance
+    (distance null = 1er palier, noté en reason) ;
+    mooves_apply_movement (ledger + balance même transaction, lit
+    mooves_initial_balance si non-null en solde_initial, AUCUNE
+    positivité) ; accept_trip_request étendu (gain conducteur + usage
+    demandeur rattachés au trip, dans la MÊME transaction, pas de
+    trigger) ; trigger fonds de solidarité → mouvement
+    fonds_solidarite (mécanique base seule, pas d'UI).
+  - AUCUNE policy d'écriture ledger/balance/grants côté client : deny
+    by default = pas d'achat ni transfert possibles. Selects self de
+    0001 suffisent.
+  - /equilibre : strictement privé — aide apportée / aide reçue /
+    dynamique de participation + historique. Vocabulaire imposé
+    respecté (vérifié par grep : zéro solde/crédit/gagner/dépenser
+    dans l'UI). Négatif = message rassurant, rien de bloqué. Lit
+    mooves_imbalance_weeks (sans effet tant que null). Lien /foyer.
+
+- 06/08 : fix acceptation (e88042d) : migration 0011 (NON APPLIQUÉE) —
+  trip_children en ON CONFLICT DO NOTHING dans accept_trip_request,
+  décrément places + Mooves UNIQUEMENT si insertion réelle
+  (GET DIAGNOSTICS), demande accepte dans tous les cas. UI /demandes :
+  rechargement de l'état réel après échec du RPC (plus d'affichage
+  optimiste), idem sur refus.
+
 ## Next step exact
-1. Ben relance « Générer les trajets » (rattrape Matteo sur Tennis).
-2. Tester le parcours hub complet : publier → demander → accepter
-   → places à 0 → couvert.
-3. Étape 7 : système Mooves (sans aucune brique de paiement).
+1. Ben applique les migrations 0010 et 0011, régénère les types.
+2. Tester : accepter une demande → 2 mouvements liés au trajet, gain
+   30 si distance null (noté), balance à jour, /equilibre chez les
+   deux parents.
+3. Étape 8 : sécurité enfant (bulletin de trajet, meeting points,
+   fenêtre de confiance).
 2. Étape 6 : lien filtré cercle intime vers hub (déjà en place via
    hub_trips_view) puis étape 7 : système Mooves (sans paiement).
 2. Tester : activités → Générer les trajets → attribuer conducteur,
