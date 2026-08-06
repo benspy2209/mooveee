@@ -361,6 +361,9 @@ function ReceivedRequestRow({
     if (rpcError) {
       setError(rpcError.message)
       setSubmitting(false)
+      // La transaction a été annulée côté base : on recharge pour
+      // afficher l'état réel, jamais un état optimiste.
+      onChanged()
       return
     }
 
@@ -380,6 +383,7 @@ function ReceivedRequestRow({
     if (updateError) {
       setError(updateError.message)
       setSubmitting(false)
+      onChanged()
       return
     }
 
