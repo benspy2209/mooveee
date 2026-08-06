@@ -84,8 +84,40 @@ qu'il faut revoir. Signaler, ne pas contourner.
 
 ## Règles de sécurité apprises en construisant
 
-Cinq failles réelles ont été trouvées et fermées pendant le développement.
-Chacune donne une règle générale. Les relire avant d'écrire une policy.
+Six failles réelles ont été trouvées et fermées pendant le développement.
+Chacune donne une règle générale. Les relire avant d'écrire une policy ou
+une fonction.
+
+### Une fonction SECURITY DEFINER est exposée via l'API
+
+`mooves_apply_movement` écrivait dans le ledger en `security definer`, sans
+révocation. Toute fonction du schéma `public` étant exposée via PostgREST,
+n'importe quel utilisateur authentifié pouvait l'appeler depuis la console
+du navigateur avec son propre `user_id` et le montant de son choix. Ce n'est
+pas un achat de Mooves, c'est un auto-crédit direct, et il annulait tout le
+raisonnement du deny by default.
+
+**Règle** : toute fonction `security definer` qui écrit doit être révoquée
+pour `public`, `anon` et `authenticated`, sauf si elle est le point d'entrée
+voulu **et** qu'elle vérifie elle-même l'identité de l'appelant. Les
+fonctions appelantes, elles-mêmes `security definer`, continuent de
+l'appeler sans problème.
+
+```sql
+revoke execute on function ma_fonction(types...) from public, anon, authenticated;
+```
+
+Vérification :
+
+```sql
+select p.proname, has_function_privilege('authenticated', p.oid, 'execute')
+from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public';
+```
+
+Exception assumée : `accept_trip_request` reste appelable par
+`authenticated`, c'est le conducteur qui clique, et elle vérifie
+l'appartenance au foyer conducteur en première instruction.
 
 ### Une RLS filtre les LIGNES, jamais les COLONNES
 
@@ -153,16 +185,39 @@ policy qui interroge directement la table qu'elle protège.
 
 ---
 
+## Écriture d'opérations composées
+
+Toute opération qui touche plusieurs tables passe par un RPC en une seule
+transaction. Deux règles apprises sur `accept_trip_request` :
+
+**Idempotence.** Un insert sec échoue sur `duplicate key` dès qu'une
+opération est rejouée (demande refusée puis redemandée, double clic,
+enfant déjà rattaché). Utiliser `on conflict do nothing`.
+
+**Effets conditionnés à l'insertion réelle.** Après un
+`on conflict do nothing`, capturer `get diagnostics v = row_count`
+**immédiatement**, sans aucune instruction intermédiaire — `ROW_COUNT`
+reflète la dernière commande exécutée. Ne déclencher les effets de bord
+(décrément de places, mouvements Mooves) que si `v > 0`. Sans cela, un
+double clic crédite deux fois et fausse l'indicateur d'équilibre de tout le
+hub.
+
+**Pas d'état optimiste sur échec.** Après un échec de RPC, l'interface doit
+recharger depuis la base : le rollback a tout annulé, afficher « Acceptée »
+en vert à côté d'un message d'erreur ment sur l'état réel.
+
+---
+
 ## Mooves : gain, dépense, influence
 
 La Note d'arbitrage §5 est la source de vérité. Distinction structurante :
 le risque juridique porte sur ce que le conducteur **reçoit**, pas sur la
 façon dont le compteur s'incrémente.
 
-**Côté gain — autorisé.** Le barème indexé sur la distance du Doc1 §3.4 est
-maintenu par décision du porteur. Un gain proportionnel à la distance est
-acceptable parce que les Mooves n'ont aucune valeur : le conducteur ne
-reçoit rien de patrimonial.
+**Côté gain — autorisé.** Barème indexé sur la distance (Doc1 §3.4, maintenu
+par arbitrage porteur) : 30 unités jusqu'à 3 km, 40 jusqu'à 6, 50 jusqu'à 10,
+60 jusqu'à 15, 70 au-delà. Stocké dans `app_settings.mooves_distance_scale`,
+jamais en dur.
 
 **Côté dépense — strictement interdit.** Les Mooves ne doivent jamais être :
 achetables, convertibles, transférables entre utilisateurs, exigibles comme
@@ -180,8 +235,16 @@ Il ne doit jamais bloquer une urgence, sanctionner publiquement, exclure
 automatiquement une famille vulnérable, obliger un parent à conduire, ni
 se transformer en droit à un trajet précis.
 
+**Architecture d'écriture.** `mooves_ledger`, `mooves_balance` et
+`solidarity_fund_grants` n'ont **aucune policy d'écriture côté client**. Le
+deny by default rend l'achat et le transfert structurellement impossibles,
+pas seulement absents de l'interface. Seule `mooves_apply_movement`, révoquée
+pour les rôles clients, écrit — appelée par `accept_trip_request` et par le
+trigger de solidarité. Ne jamais ajouter de policy insert/update sur ces
+tables.
+
 **Solde négatif** : autorisé, non bloquant. Ne jamais ajouter de contrainte
-`check (balance >= 0)`.
+`check (balance >= 0)`, ni de vérification de solde avant une demande.
 
 ---
 
@@ -320,10 +383,15 @@ Ne pas coder de pourcentage fixe d'automatisation.
 - Jamais de secret, `.env` ou clé API commitée.
 - Migrations versionnées dans `supabase/migrations/`. Rédigées par l'agent,
   **appliquées par Ben uniquement**. Ne jamais lancer `supabase db push`.
+- **Numérotation** : exécuter `ls supabase/migrations/` avant de nommer un
+  nouveau fichier. Trois collisions de numéro ont eu lieu en deux jours, et
+  deux fichiers portant le même numéro cassent `supabase migration list`.
+  Le nom doit reprendre l'étape réelle, pas une supposition.
 - Toute migration doit être idempotente (`drop policy if exists`,
   `create table if not exists`, `create or replace function`).
-- Un seul fichier par numéro de migration. Vérifier le nom exact avant tout
-  ajout en fin de fichier.
+- Un `create or replace function` ne réinitialise pas les `revoke` posés
+  précédemment, mais le vérifier après application sur les fonctions
+  sensibles.
 - Génération de fichier : toujours `commande > /tmp/x && mv /tmp/x cible`.
   Une redirection simple détruit la cible avant de savoir si la commande
   réussit.
@@ -338,13 +406,14 @@ Ne pas coder de pourcentage fixe d'automatisation.
 3. ~~Enfants (photos Storage privé) et activités (rrule)~~
 4. ~~Trajets, génération jusqu'à 1 an, vue Semaine, attribution, annulation~~
 5. ~~Hubs : création, code, adhésion, pacte, publication, demandes de place~~
-6. **Mooves** — ledger, solde, indice d'équilibre privé, fonds de solidarité
-7. Matching Macarons 3D, explication en 3 points
+6. ~~Mooves : ledger, solde, écran équilibre privé, fonds de solidarité~~
+7. **Matching Macarons 3D**, explication en 3 points
 8. Sécurité enfant : bulletin de trajet, meeting points, fenêtre de confiance
 9. Mode Concierge, automatisations de base
 10. Métriques institutionnelles, sans facturation automatique
 11. Module défraiement, développé non activé
-12. Audit RLS complet, seuil de réidentification, test d'effacement
+12. Audit RLS et droits d'exécution complets, seuil de réidentification,
+    test d'effacement
 
 Rien ne va en pilote avec de vraies familles avant l'étape 12 et la
 validation de la DPIA.
@@ -358,10 +427,21 @@ validation de la DPIA.
   hub peut lire `private_note` par un select direct sur `trips`. La
   discipline tient au code, pas à la base. À corriger par déplacement du
   champ dans une table séparée ou par restriction de la policy.
+- **Aucune distance sur les trajets.** `trips.distance_km` est toujours
+  `null`, donc le barème Mooves applique systématiquement le premier palier
+  (30 unités) quel que soit le trajet réel. Le barème existe mais ne
+  s'applique jamais. Nécessite soit une saisie manuelle sur l'activité, soit
+  un calcul, ce qui suppose des coordonnées et donc un arbitrage
+  géolocalisation. **Question produit à trancher par le porteur.**
+- **Demandes acceptées en double.** L'index unique sur `trip_requests` ne
+  couvre que les demandes en attente : deux demandes acceptées pour le même
+  enfant sur le même trajet peuvent coexister. Sans conséquence en base
+  grâce à l'idempotence, mais confus à l'affichage.
 - **Invitations de foyer** : créent une ligne mais n'envoient aucun email et
   n'ont pas de parcours d'acceptation.
 - **Garde alternée** : un enfant ne peut appartenir qu'à un seul foyer. Le
   Doc1 évoque le cas, le schéma ne le permet pas. Les contraintes `check` ne
   se réévaluent pas si un enfant change de foyer.
 - **Audit systématique** : lister toutes les tables avec RLS activée et
-  aucune policy, avant le pilote.
+  aucune policy, et toutes les fonctions `security definer` exécutables par
+  `authenticated`, avant le pilote.
