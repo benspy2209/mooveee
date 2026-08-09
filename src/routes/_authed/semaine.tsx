@@ -689,29 +689,7 @@ function WeekScreen({
     <main className="min-h-screen bg-gray-50 px-4 py-8">
       <div className="mx-auto w-full max-w-5xl space-y-6">
         <div className="rounded-lg bg-white p-6 shadow">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-xl font-semibold text-gray-900">La semaine</h1>
-            <div className="flex gap-3">
-              <Link
-                to="/activites"
-                className="text-sm text-blue-600 hover:underline"
-              >
-                Activités
-              </Link>
-              <Link
-                to="/enfants"
-                className="text-sm text-blue-600 hover:underline"
-              >
-                Enfants
-              </Link>
-              <Link
-                to="/foyer"
-                className="text-sm text-blue-600 hover:underline"
-              >
-                Mon foyer
-              </Link>
-            </div>
-          </div>
+          <h1 className="text-xl font-semibold text-gray-900">La semaine</h1>
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">

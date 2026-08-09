@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { Navigate, createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 
@@ -12,10 +12,16 @@ export const Route = createFileRoute('/login')({
 type Status = 'idle' | 'sending' | 'sent'
 
 function LoginPage() {
-  const { signInWithEmail } = useAuth()
+  const { signInWithEmail, session, loading } = useAuth()
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<Status>('idle')
   const [error, setError] = useState<string | null>(null)
+
+  // Déjà connecté (magic link validé, connexion dev réussie…) : la page
+  // de connexion n'a plus de raison d'être, direction le foyer.
+  if (!loading && session) {
+    return <Navigate to="/foyer" />
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()

@@ -39,9 +39,7 @@ function buildRrule(dayCodes: Array<string>) {
 }
 
 function parseRruleDays(rrule: string): Array<string> {
-  const byday = rrule
-    .split(';')
-    .find((part) => part.startsWith('BYDAY='))
+  const byday = rrule.split(';').find((part) => part.startsWith('BYDAY='))
   if (!byday) return []
   return byday
     .slice('BYDAY='.length)
@@ -153,7 +151,9 @@ function ActivitesPage() {
         .order('created_at'),
       supabase
         .from('activities')
-        .select('id, child_id, label, location_label, rrule, starts_at, ends_at')
+        .select(
+          'id, child_id, label, location_label, rrule, starts_at, ends_at',
+        )
         .eq('household_id', membership.household_id)
         .order('created_at'),
     ])
@@ -280,31 +280,9 @@ function ActivitiesScreen({
     <main className="min-h-screen bg-gray-50 px-4 py-8">
       <div className="mx-auto w-full max-w-lg space-y-6">
         <div className="rounded-lg bg-white p-8 shadow">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-semibold text-gray-900">
-              Les activités des enfants
-            </h1>
-            <div className="flex gap-3">
-              <Link
-                to="/semaine"
-                className="text-sm text-blue-600 hover:underline"
-              >
-                Semaine
-              </Link>
-              <Link
-                to="/enfants"
-                className="text-sm text-blue-600 hover:underline"
-              >
-                Enfants
-              </Link>
-              <Link
-                to="/foyer"
-                className="text-sm text-blue-600 hover:underline"
-              >
-                Mon foyer
-              </Link>
-            </div>
-          </div>
+          <h1 className="text-xl font-semibold text-gray-900">
+            Les activités des enfants
+          </h1>
 
           {activities.length === 0 && !adding && (
             <p className="mt-4 text-sm text-gray-600">
@@ -507,7 +485,9 @@ function ActivityForm({
   const [date, setDate] = useState(
     activity && !activity.rrule ? toDateInput(activity.starts_at) : '',
   )
-  const [startTime, setStartTime] = useState(toTimeInput(activity?.starts_at ?? null))
+  const [startTime, setStartTime] = useState(
+    toTimeInput(activity?.starts_at ?? null),
+  )
   const [endTime, setEndTime] = useState(toTimeInput(activity?.ends_at ?? null))
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)

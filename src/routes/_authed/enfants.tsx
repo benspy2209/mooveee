@@ -70,7 +70,9 @@ function EnfantsPage() {
 
     const { data: childrenData, error: childrenError } = await supabase
       .from('children')
-      .select('id, first_name, birth_year, photo_url, photo_consent, booster_seat')
+      .select(
+        'id, first_name, birth_year, photo_url, photo_consent, booster_seat',
+      )
       .eq('household_id', membership.household_id)
       .order('created_at')
 
@@ -83,9 +85,7 @@ function EnfantsPage() {
     // URLs signées de courte durée, demandées UNIQUEMENT pour les
     // enfants dont photo_consent est true. Sans consentement, aucune
     // signature n'est même demandée (§9.2).
-    const consented = childrenData.filter(
-      (c) => c.photo_consent && c.photo_url,
-    )
+    const consented = childrenData.filter((c) => c.photo_consent && c.photo_url)
     const urls: Record<string, string> = {}
     if (consented.length > 0) {
       const { data: signed } = await supabase.storage
@@ -191,25 +191,9 @@ function ChildrenScreen({
     <main className="min-h-screen bg-gray-50 px-4 py-8">
       <div className="mx-auto w-full max-w-lg space-y-6">
         <div className="rounded-lg bg-white p-8 shadow">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-semibold text-gray-900">
-              Les enfants du foyer
-            </h1>
-            <div className="flex gap-3">
-              <Link
-                to="/activites"
-                className="text-sm text-blue-600 hover:underline"
-              >
-                Activités
-              </Link>
-              <Link
-                to="/foyer"
-                className="text-sm text-blue-600 hover:underline"
-              >
-                Mon foyer
-              </Link>
-            </div>
-          </div>
+          <h1 className="text-xl font-semibold text-gray-900">
+            Les enfants du foyer
+          </h1>
 
           {children.length === 0 && !adding && (
             <p className="mt-4 text-sm text-gray-600">
@@ -395,8 +379,8 @@ function ChildRow({
 
       {confirmingDelete && (
         <p className="mt-2 rounded-md bg-red-50 p-3 text-sm text-red-800">
-          Supprimer {child.first_name} du foyer ? Sa photo éventuelle sera
-          aussi supprimée. Cette action est définitive.
+          Supprimer {child.first_name} du foyer ? Sa photo éventuelle sera aussi
+          supprimée. Cette action est définitive.
         </p>
       )}
 
@@ -426,7 +410,9 @@ function ChildForm({
   )
   const [boosterSeat, setBoosterSeat] = useState(child?.booster_seat ?? false)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
-  const [photoConsent, setPhotoConsent] = useState(child?.photo_consent ?? false)
+  const [photoConsent, setPhotoConsent] = useState(
+    child?.photo_consent ?? false,
+  )
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // Mémorise l'id créé pour ne pas insérer deux fois si l'upload de la
@@ -446,9 +432,7 @@ function ChildForm({
         return
       }
       if (!(photoFile.type in PHOTO_EXTENSIONS)) {
-        setError(
-          'Format non accepté. Formats autorisés : JPEG, PNG ou WebP.',
-        )
+        setError('Format non accepté. Formats autorisés : JPEG, PNG ou WebP.')
         return
       }
       if (photoFile.size > PHOTO_MAX_BYTES) {
@@ -668,11 +652,7 @@ function ChildForm({
           disabled={submitting || firstName.trim() === ''}
           className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {submitting
-            ? 'Enregistrement…'
-            : child
-              ? 'Enregistrer'
-              : 'Ajouter'}
+          {submitting ? 'Enregistrement…' : child ? 'Enregistrer' : 'Ajouter'}
         </button>
       </div>
     </form>

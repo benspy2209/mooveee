@@ -289,25 +289,9 @@ function DemandesPage() {
     <main className="min-h-screen bg-gray-50 px-4 py-8">
       <div className="mx-auto w-full max-w-lg space-y-6">
         <div className="rounded-lg bg-white p-8 shadow">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-semibold text-gray-900">
-              Les demandes de place
-            </h1>
-            <div className="flex gap-3">
-              <Link
-                to="/hubs"
-                className="text-sm text-blue-600 hover:underline"
-              >
-                Hubs
-              </Link>
-              <Link
-                to="/semaine"
-                className="text-sm text-blue-600 hover:underline"
-              >
-                Semaine
-              </Link>
-            </div>
-          </div>
+          <h1 className="text-xl font-semibold text-gray-900">
+            Les demandes de place
+          </h1>
 
           <h2 className="mt-6 text-sm font-medium text-gray-700">
             Demandes reçues sur mes trajets

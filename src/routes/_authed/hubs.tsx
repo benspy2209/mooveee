@@ -370,29 +370,7 @@ function HubsPage() {
     <main className="min-h-screen bg-gray-50 px-4 py-8">
       <div className="mx-auto w-full max-w-lg space-y-6">
         <div className="rounded-lg bg-white p-8 shadow">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-semibold text-gray-900">Les hubs</h1>
-            <div className="flex gap-3">
-              <Link
-                to="/demandes"
-                className="text-sm text-blue-600 hover:underline"
-              >
-                Demandes
-              </Link>
-              <Link
-                to="/semaine"
-                className="text-sm text-blue-600 hover:underline"
-              >
-                Semaine
-              </Link>
-              <Link
-                to="/foyer"
-                className="text-sm text-blue-600 hover:underline"
-              >
-                Mon foyer
-              </Link>
-            </div>
-          </div>
+          <h1 className="text-xl font-semibold text-gray-900">Les hubs</h1>
 
           <p className="mt-2 text-sm text-gray-600">
             Un hub relie plusieurs familles autour d’une école, d’un club ou
