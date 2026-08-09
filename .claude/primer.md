@@ -213,6 +213,14 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
     lib/dropoff-reminders.ts. Types database.ts étendus À LA MAIN pour
     les 3 RPC (la régénération les écrasera proprement).
 
+- 09/08 : navigation (dfb7b36) — header _authed avec menu hamburger
+  mobile-first (7 écrans + Se déconnecter, page courante marquée,
+  fermeture lien/extérieur/Escape), liens d'en-tête retirés des 6
+  écrans (les CTA contextuels et cartes du foyer restent). Racine / :
+  connecté → /foyer, anonyme → /login (atterrissage magic link) ;
+  /login → /foyer si connecté ; page scaffold supprimée. Bannière de
+  relance passée sous le header (plus sticky).
+
 ## Next step exact
 0. Ben : SUPABASE_SERVICE_ROLE_KEY dans .env.local (dashboard →
    Project Settings → API → service_role), puis
