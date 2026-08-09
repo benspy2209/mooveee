@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "lint": "eslint",
     "format": "prettier --write . && eslint --fix",
-    "check": "prettier --check ."
+    "check": "prettier --check .",
+    "set-dev-password": "node --env-file-if-exists=.env.local scripts/set-dev-password.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.111.0",
