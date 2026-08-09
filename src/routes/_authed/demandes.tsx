@@ -40,6 +40,7 @@ function formatTripDate(iso: string): string {
 interface SentRequest {
   id: string
   trip_id: string
+  child_id: string
   status: RequestStatus
   message: string | null
   created_at: string
@@ -96,6 +97,13 @@ function DemandesPage() {
   const [requesterNames, setRequesterNames] = useState<Map<string, string>>(
     new Map(),
   )
+  // Fenêtre de confiance (Doc1 §12.3) : demandes reçues dont le foyer
+  // demandeur n'a encore jamais partagé de trajet avec le nôtre.
+  const [firstContactIds, setFirstContactIds] = useState<Set<string>>(new Set())
+  // Bulletin de trajet (Doc1 §12.2), côté parent : confirmations de
+  // dépôt de MES enfants, clé `${trip_id}|${child_id}`. La RLS ne
+  // renvoie que les enfants du foyer.
+  const [dropoffs, setDropoffs] = useState<Map<string, string>>(new Map())
 
   const load = useCallback(async () => {
     if (!userId) return
@@ -123,7 +131,9 @@ function DemandesPage() {
     const [sentResult, receivedResult] = await Promise.all([
       supabase
         .from('trip_requests')
-        .select('id, trip_id, status, message, created_at, children(first_name)')
+        .select(
+          'id, trip_id, child_id, status, message, created_at, children(first_name)',
+        )
         .eq('requester_household_id', membership.household_id)
         .order('created_at', { ascending: false }),
       supabase
@@ -182,11 +192,43 @@ function DemandesPage() {
       }
     }
 
+    // Fenêtre de confiance : uniquement pour les demandes en attente
+    // (c'est avant d'accepter que le contact préalable a un sens). La
+    // fonction est réservée au foyer conducteur, ce que nous sommes ici.
+    const pending = receivedResult.data.filter((r) => r.status === 'en_attente')
+    const firstContacts = new Set<string>()
+    if (pending.length > 0) {
+      const results = await Promise.all(
+        pending.map((r) =>
+          supabase.rpc('trip_request_first_contact', { p_request: r.id }),
+        ),
+      )
+      results.forEach((result, index) => {
+        if (result.data === true) firstContacts.add(pending[index].id)
+      })
+    }
+
+    // Statut de dépôt de mes enfants sur les trajets demandés : la RLS
+    // de trip_dropoff_confirmations ne renvoie ici que mes enfants.
+    const acceptedSent = sentResult.data.filter((r) => r.status === 'accepte')
+    const dropoffMap = new Map<string, string>()
+    if (acceptedSent.length > 0) {
+      const { data: dropoffRows } = await supabase
+        .from('trip_dropoff_confirmations')
+        .select('trip_id, child_id, confirmed_at')
+        .in('trip_id', [...new Set(acceptedSent.map((r) => r.trip_id))])
+      dropoffRows?.forEach((row) => {
+        dropoffMap.set(`${row.trip_id}|${row.child_id}`, row.confirmed_at)
+      })
+    }
+
     setHouseholdId(membership.household_id)
     setSent(sentResult.data)
     setSentTrips(tripInfos)
     setReceived(receivedResult.data)
     setRequesterNames(names)
+    setFirstContactIds(firstContacts)
+    setDropoffs(dropoffMap)
     setLoading(false)
   }, [userId])
 
@@ -252,7 +294,10 @@ function DemandesPage() {
               Les demandes de place
             </h1>
             <div className="flex gap-3">
-              <Link to="/hubs" className="text-sm text-blue-600 hover:underline">
+              <Link
+                to="/hubs"
+                className="text-sm text-blue-600 hover:underline"
+              >
                 Hubs
               </Link>
               <Link
@@ -278,8 +323,10 @@ function DemandesPage() {
                   key={request.id}
                   request={request}
                   requesterName={
-                    requesterNames.get(request.requester_id) ?? 'Un parent du hub'
+                    requesterNames.get(request.requester_id) ??
+                    'Un parent du hub'
                   }
+                  firstContact={firstContactIds.has(request.id)}
                   onChanged={() => void load()}
                 />
               ))}
@@ -317,6 +364,27 @@ function DemandesPage() {
                         <p className="text-sm text-gray-500">
                           Pour {request.children?.first_name ?? 'un enfant'}
                         </p>
+                        {request.status === 'accepte' &&
+                          (dropoffs.has(
+                            `${request.trip_id}|${request.child_id}`,
+                          ) ? (
+                            <p className="mt-1 text-sm font-medium text-green-700">
+                              Dépôt confirmé par le conducteur à{' '}
+                              {new Date(
+                                dropoffs.get(
+                                  `${request.trip_id}|${request.child_id}`,
+                                ) as string,
+                              ).toLocaleTimeString('fr-BE', {
+                                timeZone: 'Europe/Brussels',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </p>
+                          ) : (
+                            <p className="mt-1 text-sm text-gray-500">
+                              Dépôt : en attente de confirmation du conducteur.
+                            </p>
+                          ))}
                       </div>
                       <span
                         className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${REQUEST_STATUS_STYLES[request.status]}`}
@@ -338,10 +406,12 @@ function DemandesPage() {
 function ReceivedRequestRow({
   request,
   requesterName,
+  firstContact,
   onChanged,
 }: {
   request: ReceivedRequest
   requesterName: string
+  firstContact: boolean
   onChanged: () => void
 }) {
   const [submitting, setSubmitting] = useState(false)
@@ -422,6 +492,15 @@ function ReceivedRequestRow({
           </span>
         )}
       </div>
+
+      {request.status === 'en_attente' && firstContact && (
+        <p className="mt-2 rounded-md bg-blue-50 p-3 text-sm text-blue-900">
+          Ce serait le premier trajet entre votre foyer et celui de{' '}
+          {requesterName}. Prenez contact avant le trajet pour faire
+          connaissance et convenir des détails — rien ne presse, vous restez
+          libre d’accepter ou non.
+        </p>
+      )}
 
       {request.status === 'en_attente' && (
         <div className="mt-2 flex gap-2">

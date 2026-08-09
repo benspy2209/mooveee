@@ -41,6 +41,7 @@ interface Trip {
   published_to_hub: boolean
   seats_total: number | null
   seats_available: number | null
+  meeting_point_id: string | null
   activities: { label: string } | null
   trip_children: Array<{ child_id: string }>
 }
@@ -163,7 +164,15 @@ function parseRruleDays(rrule: string): Array<number> {
 
 // ---------------------------------------------------------------------
 
-const DAY_LABELS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+const DAY_LABELS = [
+  'Lundi',
+  'Mardi',
+  'Mercredi',
+  'Jeudi',
+  'Vendredi',
+  'Samedi',
+  'Dimanche',
+]
 
 const CHILD_COLORS = [
   'border-blue-300 bg-blue-50 text-blue-900',
@@ -240,32 +249,33 @@ function SemainePage() {
     const from = fromBrusselsWallClock(weekStart).toISOString()
     const to = fromBrusselsWallClock(weekEnd).toISOString()
 
-    const [childrenResult, membersResult, hubsResult, tripsResult] = await Promise.all([
-      supabase
-        .from('children')
-        .select('id, first_name')
-        .eq('household_id', membership.household_id)
-        .order('created_at'),
-      supabase
-        .from('household_members')
-        .select('user_id, users(first_name, last_name)')
-        .eq('household_id', membership.household_id)
-        .order('joined_at'),
-      supabase
-        .from('hub_members')
-        .select('hub_id, hubs(id, name)')
-        .eq('user_id', userId)
-        .not('validated_at', 'is', null),
-      supabase
-        .from('trips')
-        .select(
-          'id, activity_id, direction, status, driver_id, scheduled_at, origin_label, destination_label, hub_id, published_to_hub, seats_total, seats_available, activities(label), trip_children(child_id)',
-        )
-        .eq('household_id', membership.household_id)
-        .gte('scheduled_at', from)
-        .lt('scheduled_at', to)
-        .order('scheduled_at'),
-    ])
+    const [childrenResult, membersResult, hubsResult, tripsResult] =
+      await Promise.all([
+        supabase
+          .from('children')
+          .select('id, first_name')
+          .eq('household_id', membership.household_id)
+          .order('created_at'),
+        supabase
+          .from('household_members')
+          .select('user_id, users(first_name, last_name)')
+          .eq('household_id', membership.household_id)
+          .order('joined_at'),
+        supabase
+          .from('hub_members')
+          .select('hub_id, hubs(id, name)')
+          .eq('user_id', userId)
+          .not('validated_at', 'is', null),
+        supabase
+          .from('trips')
+          .select(
+            'id, activity_id, direction, status, driver_id, scheduled_at, origin_label, destination_label, hub_id, published_to_hub, seats_total, seats_available, meeting_point_id, activities(label), trip_children(child_id)',
+          )
+          .eq('household_id', membership.household_id)
+          .gte('scheduled_at', from)
+          .lt('scheduled_at', to)
+          .order('scheduled_at'),
+      ])
 
     const firstError =
       childrenResult.error ??
@@ -287,9 +297,7 @@ function SemainePage() {
     setHouseholdId(membership.household_id)
     setChildrenList(childrenResult.data)
     setMembers(membersResult.data)
-    setMyHubs(
-      hubsResult.data.flatMap((m) => (m.hubs ? [m.hubs] : [])),
-    )
+    setMyHubs(hubsResult.data.flatMap((m) => (m.hubs ? [m.hubs] : [])))
     setTrips(tripsResult.data)
     setLoading(false)
     // weekStart dérive de weekOffset : la dépendance utile est weekOffset.
@@ -351,6 +359,7 @@ function SemainePage() {
 
   return (
     <WeekScreen
+      userId={userId}
       householdId={householdId}
       childrenList={childrenList}
       members={members}
@@ -376,6 +385,7 @@ function SemainePage() {
 }
 
 function WeekScreen({
+  userId,
   householdId,
   childrenList,
   members,
@@ -387,6 +397,7 @@ function WeekScreen({
   onChanged,
   onTripPatched,
 }: {
+  userId: string | null
   householdId: string
   childrenList: Array<ChildOption>
   members: Array<Member>
@@ -405,7 +416,9 @@ function WeekScreen({
     done: number
     total: number
   } | null>(null)
-  const [generationMessage, setGenerationMessage] = useState<string | null>(null)
+  const [generationMessage, setGenerationMessage] = useState<string | null>(
+    null,
+  )
   const [generationError, setGenerationError] = useState<string | null>(null)
 
   const childIndex = new Map(childrenList.map((c, i) => [c.id, i]))
@@ -449,7 +462,9 @@ function WeekScreen({
     const [activitiesResult, existingResult] = await Promise.all([
       supabase
         .from('activities')
-        .select('id, child_id, label, location_label, rrule, starts_at, ends_at')
+        .select(
+          'id, child_id, label, location_label, rrule, starts_at, ends_at',
+        )
         .eq('household_id', householdId),
       supabase
         .from('trips')
@@ -497,8 +512,18 @@ function WeekScreen({
         origin: string
         destination: string
       }> = [
-        { direction: 'aller', at: startsAt, origin: HOME_LABEL, destination: place },
-        { direction: 'retour', at: endsAt, origin: place, destination: HOME_LABEL },
+        {
+          direction: 'aller',
+          at: startsAt,
+          origin: HOME_LABEL,
+          destination: place,
+        },
+        {
+          direction: 'retour',
+          at: endsAt,
+          origin: place,
+          destination: HOME_LABEL,
+        },
       ]
       for (const occ of occurrences) {
         const iso = occ.at.toISOString()
@@ -606,7 +631,9 @@ function WeekScreen({
         .range(from, from + PAGE_SIZE - 1)
 
       if (pageError || !page) {
-        setGenerationError(pageError?.message ?? 'Réponse inattendue du serveur')
+        setGenerationError(
+          pageError?.message ?? 'Réponse inattendue du serveur',
+        )
         setGenerating(false)
         setGenerationProgress(null)
         return
@@ -637,7 +664,8 @@ function WeekScreen({
     }
 
     const horizonLabel =
-      HORIZONS.find((h) => h.days === horizonDays)?.label ?? `${horizonDays} jours`
+      HORIZONS.find((h) => h.days === horizonDays)?.label ??
+      `${horizonDays} jours`
     setGenerationMessage(
       insertedCount === 0
         ? 'Tout est à jour : aucun nouveau trajet à créer. Enfants rattachés vérifiés sur les trajets existants.'
@@ -765,7 +793,8 @@ function WeekScreen({
               <div
                 className="relative w-12 shrink-0"
                 style={{
-                  height: (GRID_HOUR_END - GRID_HOUR_START) * HOUR_HEIGHT_PX + 24,
+                  height:
+                    (GRID_HOUR_END - GRID_HOUR_START) * HOUR_HEIGHT_PX + 24,
                 }}
               >
                 {Array.from(
@@ -788,8 +817,7 @@ function WeekScreen({
                 let previousBottom = -Infinity
                 const positioned = dayTrips.map((trip) => {
                   const wall = toBrusselsWallClock(new Date(trip.scheduled_at))
-                  const minutes =
-                    (wall.hh - GRID_HOUR_START) * 60 + wall.mm
+                  const minutes = (wall.hh - GRID_HOUR_START) * 60 + wall.mm
                   let top = Math.max(
                     0,
                     Math.min(
@@ -835,12 +863,13 @@ function WeekScreen({
 
                       {positioned.map(({ trip, wall, top }) => {
                         const childId = trip.trip_children[0]?.child_id
-                        const colorClass = trip.status === 'annule'
-                          ? 'border-gray-300 bg-gray-100 text-gray-400 line-through'
-                          : CHILD_COLORS[
-                              (childIndex.get(childId ?? '') ?? 0) %
-                                CHILD_COLORS.length
-                            ]
+                        const colorClass =
+                          trip.status === 'annule'
+                            ? 'border-gray-300 bg-gray-100 text-gray-400 line-through'
+                            : CHILD_COLORS[
+                                (childIndex.get(childId ?? '') ?? 0) %
+                                  CHILD_COLORS.length
+                              ]
                         const driver = members.find(
                           (m) => m.user_id === trip.driver_id,
                         )
@@ -885,6 +914,7 @@ function WeekScreen({
             <TripDetail
               key={selectedTrip.id}
               trip={selectedTrip}
+              userId={userId}
               members={members}
               myHubs={myHubs}
               childName={
@@ -906,6 +936,7 @@ function WeekScreen({
 
 function TripDetail({
   trip,
+  userId,
   members,
   myHubs,
   childName,
@@ -914,6 +945,7 @@ function TripDetail({
   onClose,
 }: {
   trip: Trip
+  userId: string | null
   members: Array<Member>
   myHubs: Array<HubOption>
   childName: string | null
@@ -1010,107 +1042,111 @@ function TripDetail({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium text-gray-900">
-            {trip.activities?.label ?? 'Trajet'} —{' '}
-            {trip.direction === 'aller' ? 'aller' : 'retour'}
-            {trip.status === 'annule' && ' (annulé)'}
-          </p>
-          <p className="mt-1 text-sm text-gray-600">
-            {dateLabel} à {formatTime(wall)}
-            {childName && ` · ${childName}`}
-          </p>
-          <p className="text-sm text-gray-500">
-            {trip.origin_label} → {trip.destination_label}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-sm text-gray-400 hover:text-gray-600"
-        >
-          Fermer
-        </button>
-      </div>
-
-      {trip.status !== 'annule' && (
-        <div className="mt-3">
-          <label
-            htmlFor={`driver-${trip.id}`}
-            className="block text-sm font-medium text-gray-700"
-          >
-            Conducteur
-          </label>
-          <select
-            id={`driver-${trip.id}`}
-            value={driverId}
-            disabled={saving}
-            onChange={(e) => void saveDriver(e.target.value)}
-            className="mt-1 w-full max-w-xs rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            <option value="">Personne pour le moment (à couvrir)</option>
-            {members.map((member) => (
-              <option key={member.user_id} value={member.user_id}>
-                {memberName(member)}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {trip.status !== 'annule' && (
-        <PublishSection
-          trip={trip}
-          myHubs={myHubs}
-          onPatched={onPatched}
-          onChanged={onChanged}
-        />
-      )}
-
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        {trip.status === 'annule' ? (
+          <div>
+            <p className="text-sm font-medium text-gray-900">
+              {trip.activities?.label ?? 'Trajet'} —{' '}
+              {trip.direction === 'aller' ? 'aller' : 'retour'}
+              {trip.status === 'annule' && ' (annulé)'}
+            </p>
+            <p className="mt-1 text-sm text-gray-600">
+              {dateLabel} à {formatTime(wall)}
+              {childName && ` · ${childName}`}
+            </p>
+            <p className="text-sm text-gray-500">
+              {trip.origin_label} → {trip.destination_label}
+            </p>
+          </div>
           <button
             type="button"
-            onClick={() =>
-              void setStatus(trip.driver_id ? 'couvert' : 'non_couvert')
-            }
-            disabled={saving}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={onClose}
+            className="text-sm text-gray-400 hover:text-gray-600"
           >
-            Rétablir ce trajet
+            Fermer
           </button>
-        ) : confirmingCancel ? (
-          <>
-            <span className="text-sm text-red-800">
-              Annuler ce trajet uniquement ? L’activité n’est pas modifiée.
-            </span>
-            <button
-              type="button"
-              onClick={() => setConfirmingCancel(false)}
-              disabled={saving}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
+        </div>
+
+        {trip.status !== 'annule' && (
+          <div className="mt-3">
+            <label
+              htmlFor={`driver-${trip.id}`}
+              className="block text-sm font-medium text-gray-700"
             >
-              Non
-            </button>
-            <button
-              type="button"
-              onClick={() => void setStatus('annule')}
+              Conducteur
+            </label>
+            <select
+              id={`driver-${trip.id}`}
+              value={driverId}
               disabled={saving}
-              className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+              onChange={(e) => void saveDriver(e.target.value)}
+              className="mt-1 w-full max-w-xs rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
-              Oui, annuler
-            </button>
-          </>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setConfirmingCancel(true)}
-            className="rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
-          >
-            Annuler ce trajet
-          </button>
+              <option value="">Personne pour le moment (à couvrir)</option>
+              {members.map((member) => (
+                <option key={member.user_id} value={member.user_id}>
+                  {memberName(member)}
+                </option>
+              ))}
+            </select>
+          </div>
         )}
-      </div>
+
+        {trip.status !== 'annule' && (
+          <PublishSection
+            trip={trip}
+            myHubs={myHubs}
+            onPatched={onPatched}
+            onChanged={onChanged}
+          />
+        )}
+
+        {trip.status !== 'annule' && userId && trip.driver_id === userId && (
+          <DropoffSection trip={trip} />
+        )}
+
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {trip.status === 'annule' ? (
+            <button
+              type="button"
+              onClick={() =>
+                void setStatus(trip.driver_id ? 'couvert' : 'non_couvert')
+              }
+              disabled={saving}
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Rétablir ce trajet
+            </button>
+          ) : confirmingCancel ? (
+            <>
+              <span className="text-sm text-red-800">
+                Annuler ce trajet uniquement ? L’activité n’est pas modifiée.
+              </span>
+              <button
+                type="button"
+                onClick={() => setConfirmingCancel(false)}
+                disabled={saving}
+                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
+              >
+                Non
+              </button>
+              <button
+                type="button"
+                onClick={() => void setStatus('annule')}
+                disabled={saving}
+                className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Oui, annuler
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmingCancel(true)}
+              className="rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
+            >
+              Annuler ce trajet
+            </button>
+          )}
+        </div>
 
         {error && (
           <p className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-800">
@@ -1143,8 +1179,38 @@ function PublishSection({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [needsCount, setNeedsCount] = useState<number | null>(null)
+  const [meetingPoints, setMeetingPoints] = useState<
+    Array<{ id: string; label: string; is_default: boolean }>
+  >([])
+  const [meetingPointId, setMeetingPointId] = useState('')
 
   const publishedHub = myHubs.find((h) => h.id === trip.hub_id)
+
+  // Points de rendez-vous du hub visé (Doc1 §12.1) : le conducteur peut
+  // en choisir un à la publication. Préselection du point par défaut.
+  const targetHubId = trip.published_to_hub ? trip.hub_id : hubId
+  useEffect(() => {
+    if (!targetHubId) {
+      setMeetingPoints([])
+      return
+    }
+    let cancelled = false
+    void supabase
+      .from('meeting_points')
+      .select('id, label, is_default')
+      .eq('hub_id', targetHubId)
+      .order('created_at')
+      .then(({ data }) => {
+        if (cancelled || !data) return
+        setMeetingPoints(data)
+        setMeetingPointId(
+          trip.meeting_point_id ?? data.find((mp) => mp.is_default)?.id ?? '',
+        )
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [targetHubId, trip.meeting_point_id])
 
   // Combien de familles du hub ont un besoin correspondant ? Un COMPTE,
   // jamais une liste ni un nom (fonction 0012). Purement informatif :
@@ -1179,6 +1245,7 @@ function PublishSection({
       published_to_hub: true,
       seats_total: seatCount,
       seats_available: seatCount,
+      meeting_point_id: meetingPointId === '' ? null : meetingPointId,
       status: 'couvert_ouvert' as TripStatus,
     }
     const { error: updateError } = await supabase
@@ -1206,6 +1273,7 @@ function PublishSection({
       published_to_hub: false,
       seats_total: null,
       seats_available: null,
+      meeting_point_id: null,
       status: (trip.driver_id ? 'couvert' : 'non_couvert') as TripStatus,
     }
     const { error: updateError } = await supabase
@@ -1239,12 +1307,19 @@ function PublishSection({
             {(trip.seats_available ?? 0) > 1 ? 's' : ''} sur les{' '}
             {trip.seats_total ?? 0} offertes aux autres familles.
           </p>
+          {trip.meeting_point_id && (
+            <p className="mt-1 text-sm text-gray-600">
+              📍 Rendez-vous :{' '}
+              {meetingPoints.find((mp) => mp.id === trip.meeting_point_id)
+                ?.label ?? 'point de rendez-vous du hub'}
+            </p>
+          )}
           {needsCount !== null && needsCount > 0 && (
             <p className="mt-1 text-sm text-blue-700">
               {needsCount} famille{needsCount > 1 ? 's' : ''} du hub{' '}
-              {needsCount > 1 ? 'ont' : 'a'} un besoin proche de ce trajet
-              (même jour, horaire et lieu similaires). Elles ne sont pas
-              nommées : chacune décide d’envoyer une demande.
+              {needsCount > 1 ? 'ont' : 'a'} un besoin proche de ce trajet (même
+              jour, horaire et lieu similaires). Elles ne sont pas nommées :
+              chacune décide d’envoyer une demande.
             </p>
           )}
           <button
@@ -1283,6 +1358,30 @@ function PublishSection({
               ))}
             </select>
           </div>
+          {meetingPoints.length > 0 && (
+            <div>
+              <label
+                htmlFor={`publish-mp-${trip.id}`}
+                className="block text-sm font-medium text-gray-700"
+              >
+                Point de rendez-vous
+              </label>
+              <select
+                id={`publish-mp-${trip.id}`}
+                value={meetingPointId}
+                onChange={(e) => setMeetingPointId(e.target.value)}
+                className="mt-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="">Aucun</option>
+                {meetingPoints.map((mp) => (
+                  <option key={mp.id} value={mp.id}>
+                    {mp.label}
+                    {mp.is_default ? ' (par défaut)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label
               htmlFor={`publish-seats-${trip.id}`}
@@ -1313,6 +1412,194 @@ function PublishSection({
 
       {error && (
         <p className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-800">
+          Une erreur est survenue : {error}
+        </p>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------
+// Bulletin de trajet (Doc1 §12.2) : le CONDUCTEUR confirme le dépôt de
+// chaque enfant à bord. La liste nominative vient du RPC
+// trip_children_aboard, réservé au conducteur — seul chemin par lequel
+// le prénom d'un enfant d'un autre foyer lui parvient. Le parent de
+// l'enfant voit la confirmation de son côté (/demandes), personne
+// d'autre (cloisonnement §12.4).
+// ---------------------------------------------------------------------
+interface AboardChild {
+  child_id: string
+  first_name: string
+  is_own_child: boolean
+}
+
+interface DropoffRow {
+  child_id: string
+  confirmed_at: string
+}
+
+function DropoffSection({ trip }: { trip: Trip }) {
+  const [aboard, setAboard] = useState<Array<AboardChild>>([])
+  const [confirmations, setConfirmations] = useState<Array<DropoffRow>>([])
+  const [reminderMinutes, setReminderMinutes] = useState<number | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [busyChildId, setBusyChildId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    const [aboardResult, confirmationsResult, delayResult] = await Promise.all([
+      supabase.rpc('trip_children_aboard', { p_trip: trip.id }),
+      supabase
+        .from('trip_dropoff_confirmations')
+        .select('child_id, confirmed_at')
+        .eq('trip_id', trip.id),
+      supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'dropoff_reminder_minutes')
+        .maybeSingle(),
+    ])
+
+    const firstError = aboardResult.error ?? confirmationsResult.error
+    if (firstError || !aboardResult.data || !confirmationsResult.data) {
+      setError(firstError?.message ?? 'Réponse inattendue du serveur')
+      setLoading(false)
+      return
+    }
+
+    setAboard(aboardResult.data)
+    setConfirmations(confirmationsResult.data)
+    // Le délai de relance est un paramètre app_settings (Doc1 §12.2),
+    // jamais une constante dans le code.
+    setReminderMinutes(delayResult.data ? Number(delayResult.data.value) : null)
+    setLoading(false)
+  }, [trip.id])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  async function confirmDropoff(childId: string) {
+    setError(null)
+    setBusyChildId(childId)
+
+    const { data: userData } = await supabase.auth.getUser()
+    const uid = userData.user?.id
+    if (!uid) {
+      setError('Session expirée, reconnectez-vous.')
+      setBusyChildId(null)
+      return
+    }
+
+    const { error: insertError } = await supabase
+      .from('trip_dropoff_confirmations')
+      .insert({ trip_id: trip.id, child_id: childId, confirmed_by: uid })
+
+    setBusyChildId(null)
+    if (insertError && insertError.code !== '23505') {
+      setError(insertError.message)
+      return
+    }
+    // 23505 : déjà confirmé (double clic) — l'état réel est rechargé.
+    void load()
+  }
+
+  async function undoDropoff(childId: string) {
+    setError(null)
+    setBusyChildId(childId)
+
+    const { error: deleteError } = await supabase
+      .from('trip_dropoff_confirmations')
+      .delete()
+      .eq('trip_id', trip.id)
+      .eq('child_id', childId)
+
+    setBusyChildId(null)
+    if (deleteError) {
+      setError(deleteError.message)
+      return
+    }
+    void load()
+  }
+
+  if (loading) {
+    return (
+      <div className="mt-4 border-t border-gray-200 pt-4">
+        <p className="text-sm text-gray-500">Chargement du bulletin…</p>
+      </div>
+    )
+  }
+
+  if (aboard.length === 0) {
+    return null
+  }
+
+  const confirmedByChild = new Map(
+    confirmations.map((c) => [c.child_id, c.confirmed_at]),
+  )
+  const unconfirmed = aboard.filter((c) => !confirmedByChild.has(c.child_id))
+  const scheduledMs = new Date(trip.scheduled_at).getTime()
+  const overdue =
+    reminderMinutes !== null &&
+    unconfirmed.length > 0 &&
+    Date.now() > scheduledMs + reminderMinutes * 60_000
+
+  return (
+    <div className="mt-4 border-t border-gray-200 pt-4">
+      <p className="text-sm font-medium text-gray-700">Bulletin de trajet</p>
+      <p className="mt-1 text-xs text-gray-500">
+        Confirmez le dépôt de chaque enfant à bord. Le parent de l’enfant voit
+        la confirmation de son côté.
+      </p>
+
+      {overdue && (
+        <p className="mt-2 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
+          L’heure du trajet est passée depuis plus de {reminderMinutes} minutes
+          : merci de confirmer le dépôt des enfants.
+        </p>
+      )}
+
+      <ul className="mt-2 divide-y divide-gray-100">
+        {aboard.map((child) => {
+          const confirmedAt = confirmedByChild.get(child.child_id)
+          return (
+            <li
+              key={child.child_id}
+              className="flex items-center justify-between gap-3 py-2"
+            >
+              <span className="text-sm text-gray-900">{child.first_name}</span>
+              {confirmedAt ? (
+                <span className="flex items-center gap-2">
+                  <span className="text-sm text-green-700">
+                    Déposé à{' '}
+                    {formatTime(toBrusselsWallClock(new Date(confirmedAt)))}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void undoDropoff(child.child_id)}
+                    disabled={busyChildId === child.child_id}
+                    className="text-xs text-gray-400 underline hover:text-gray-600 disabled:cursor-not-allowed"
+                  >
+                    Annuler
+                  </button>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void confirmDropoff(child.child_id)}
+                  disabled={busyChildId === child.child_id}
+                  className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Confirmer le dépôt
+                </button>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+
+      {error && (
+        <p className="mt-2 rounded-md bg-red-50 p-3 text-sm text-red-800">
           Une erreur est survenue : {error}
         </p>
       )}

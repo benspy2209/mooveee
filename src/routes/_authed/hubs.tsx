@@ -78,11 +78,26 @@ interface HubTripRow {
   scheduled_at: string | null
   origin_label: string | null
   destination_label: string | null
+  meeting_point_id: string | null
   seats_available: number | null
   driver_id: string | null
   driver_first_name: string | null
   children_count: number | null
 }
+
+// Meeting Points (Doc1 §12.1) : des lieux publics de rendez-vous, pas
+// des domiciles. Photos dans le bucket privé meeting-point-photos,
+// chemin {hub_id}/{meeting_point_id}.{ext}, URL signée de courte durée.
+interface MeetingPoint {
+  id: string
+  label: string
+  description: string | null
+  photo_url: string | null
+  is_default: boolean
+}
+
+const MP_PHOTO_BUCKET = 'meeting-point-photos'
+const MP_SIGNED_URL_TTL_SECONDS = 3600
 
 function formatTripDate(iso: string): string {
   return new Date(iso).toLocaleString('fr-BE', {
@@ -179,9 +194,13 @@ function compareSuggestions(a: Suggestion, b: Suggestion): number {
 // Trois points d'explication, pas de score chiffré affiché.
 function suggestionReasons(s: Suggestion): Array<string> {
   const placeTrip =
-    s.trip.direction === 'aller' ? s.trip.destination_label : s.trip.origin_label
+    s.trip.direction === 'aller'
+      ? s.trip.destination_label
+      : s.trip.origin_label
   const placeNeed =
-    s.trip.direction === 'aller' ? s.need.destination_label : s.need.origin_label
+    s.trip.direction === 'aller'
+      ? s.need.destination_label
+      : s.need.origin_label
   const kind = s.trip.direction === 'aller' ? 'Destination' : 'Lieu de départ'
   return [
     `Même jour que votre trajet non couvert : départ à ${brusselsTime(s.trip.scheduled_at ?? s.need.scheduled_at)}, votre besoin à ${brusselsTime(s.need.scheduled_at)}`,
@@ -325,8 +344,8 @@ function HubsPage() {
         <div className="w-full max-w-sm rounded-lg bg-white p-8 shadow">
           <h1 className="text-xl font-semibold text-gray-900">Les hubs</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Vous devez d’abord créer ou rejoindre un foyer avant de participer
-            à un hub.
+            Vous devez d’abord créer ou rejoindre un foyer avant de participer à
+            un hub.
           </p>
           <Link
             to="/foyer"
@@ -480,7 +499,9 @@ function PactText() {
       {PACT_TEXT.map((line, i) => (
         <li key={i}>• {line}</li>
       ))}
-      <li className="text-xs text-gray-500">Pacte de Hub, version {PACT_VERSION}</li>
+      <li className="text-xs text-gray-500">
+        Pacte de Hub, version {PACT_VERSION}
+      </li>
     </ul>
   )
 }
@@ -572,7 +593,11 @@ function HubDetail({
   const [openTrips, setOpenTrips] = useState<Array<HubTripRow>>([])
   const [myNeeds, setMyNeeds] = useState<Array<MyNeed>>([])
   const [myUserIds, setMyUserIds] = useState<Array<string>>([])
-  const [myChildren, setMyChildren] = useState<Array<{ id: string; first_name: string }>>([])
+  const [myChildren, setMyChildren] = useState<
+    Array<{ id: string; first_name: string }>
+  >([])
+  const [meetingPoints, setMeetingPoints] = useState<Array<MeetingPoint>>([])
+  const [mpPhotoUrls, setMpPhotoUrls] = useState<Record<string, string>>({})
   const [activationBanner, setActivationBanner] = useState(false)
   const previousStatus = useRef<HubStatus | null>(null)
 
@@ -587,6 +612,7 @@ function HubDetail({
       myNeedsResult,
       myMembersResult,
       myChildrenResult,
+      meetingPointsResult,
     ] = await Promise.all([
       supabase
         .from('hubs')
@@ -604,7 +630,7 @@ function HubDetail({
       supabase
         .from('hub_trips_view')
         .select(
-          'id, direction, status, scheduled_at, origin_label, destination_label, seats_available, driver_id, driver_first_name, children_count',
+          'id, direction, status, scheduled_at, origin_label, destination_label, meeting_point_id, seats_available, driver_id, driver_first_name, children_count',
         )
         .eq('hub_id', hubId)
         .eq('status', 'couvert_ouvert')
@@ -628,6 +654,11 @@ function HubDetail({
         .select('id, first_name')
         .eq('household_id', householdId)
         .order('created_at'),
+      supabase
+        .from('meeting_points')
+        .select('id, label, description, photo_url, is_default')
+        .eq('hub_id', hubId)
+        .order('created_at'),
     ])
 
     const firstError =
@@ -637,7 +668,8 @@ function HubDetail({
       openTripsResult.error ??
       myNeedsResult.error ??
       myMembersResult.error ??
-      myChildrenResult.error
+      myChildrenResult.error ??
+      meetingPointsResult.error
     if (
       firstError ||
       !hubResult.data ||
@@ -645,7 +677,8 @@ function HubDetail({
       !openTripsResult.data ||
       !myNeedsResult.data ||
       !myMembersResult.data ||
-      !myChildrenResult.data
+      !myChildrenResult.data ||
+      !meetingPointsResult.data
     ) {
       setError(firstError?.message ?? 'Réponse inattendue du serveur')
       setLoading(false)
@@ -662,7 +695,27 @@ function HubDetail({
     }
     previousStatus.current = hubResult.data.status
 
+    // URLs signées de courte durée pour les photos des points de
+    // rendez-vous (bucket privé, pas de donnée enfant).
+    const withPhoto = meetingPointsResult.data.filter((mp) => mp.photo_url)
+    const mpUrls: Record<string, string> = {}
+    if (withPhoto.length > 0) {
+      const { data: signed } = await supabase.storage
+        .from(MP_PHOTO_BUCKET)
+        .createSignedUrls(
+          withPhoto.map((mp) => mp.photo_url as string),
+          MP_SIGNED_URL_TTL_SECONDS,
+        )
+      signed?.forEach((entry, index) => {
+        if (entry.signedUrl) {
+          mpUrls[withPhoto[index].id] = entry.signedUrl
+        }
+      })
+    }
+
     setHub(hubResult.data)
+    setMeetingPoints(meetingPointsResult.data)
+    setMpPhotoUrls(mpUrls)
     setMembers(membersResult.data)
     setThreshold(
       thresholdResult.data ? Number(thresholdResult.data.value) : null,
@@ -700,6 +753,8 @@ function HubDetail({
   const pendingMembers = members.filter((m) => !m.validated_at)
   const missing =
     threshold !== null ? Math.max(0, threshold - validatedMembers.length) : null
+
+  const mpLabelById = new Map(meetingPoints.map((mp) => [mp.id, mp.label]))
 
   // « Par les autres familles » : les trajets de mon propre foyer
   // (conducteur dans mon foyer) sont exclus.
@@ -815,6 +870,14 @@ function HubDetail({
         </>
       )}
 
+      <MeetingPointsSection
+        hubId={hubId}
+        isAdmin={isAdmin}
+        meetingPoints={meetingPoints}
+        photoUrls={mpPhotoUrls}
+        onChanged={load}
+      />
+
       {suggestions.length > 0 && (
         <>
           <h3 className="mt-6 text-sm font-medium text-gray-700">
@@ -833,6 +896,11 @@ function HubDetail({
                 userId={userId}
                 householdId={householdId}
                 myChildren={myChildren}
+                meetingPointLabel={
+                  s.trip.meeting_point_id
+                    ? mpLabelById.get(s.trip.meeting_point_id)
+                    : undefined
+                }
                 reasons={suggestionReasons(s)}
                 onRequested={load}
               />
@@ -846,8 +914,8 @@ function HubDetail({
       </h3>
       {otherTrips.length === 0 ? (
         <p className="mt-2 text-sm text-gray-500">
-          Aucun trajet ouvert pour le moment. Les trajets publiés par les
-          autres familles du hub apparaîtront ici.
+          Aucun trajet ouvert pour le moment. Les trajets publiés par les autres
+          familles du hub apparaîtront ici.
         </p>
       ) : (
         <ul className="mt-2 divide-y divide-gray-100">
@@ -858,6 +926,11 @@ function HubDetail({
               userId={userId}
               householdId={householdId}
               myChildren={myChildren}
+              meetingPointLabel={
+                t.meeting_point_id
+                  ? mpLabelById.get(t.meeting_point_id)
+                  : undefined
+              }
               onRequested={load}
             />
           ))}
@@ -872,6 +945,7 @@ function HubTripCard({
   userId,
   householdId,
   myChildren,
+  meetingPointLabel,
   reasons,
   onRequested,
 }: {
@@ -879,6 +953,7 @@ function HubTripCard({
   userId: string
   householdId: string
   myChildren: Array<{ id: string; first_name: string }>
+  meetingPointLabel?: string
   reasons?: Array<string>
   onRequested: () => void
 }) {
@@ -943,6 +1018,11 @@ function HubTripCard({
             {trip.children_count ?? 0} enfant
             {(trip.children_count ?? 0) > 1 ? 's' : ''} à bord
           </p>
+          {meetingPointLabel && (
+            <p className="text-sm text-gray-500">
+              📍 Rendez-vous : {meetingPointLabel}
+            </p>
+          )}
           {reasons && (
             <ul className="mt-2 space-y-0.5 rounded-md bg-blue-50 p-2 text-xs text-blue-900">
               {reasons.map((reason, i) => (
@@ -964,8 +1044,8 @@ function HubTripCard({
 
       {sent && (
         <p className="mt-2 rounded-md bg-green-50 p-3 text-sm text-green-800">
-          Demande envoyée. Le conducteur doit maintenant l’accepter — suivez
-          son état dans « Mes demandes ».
+          Demande envoyée. Le conducteur doit maintenant l’accepter — suivez son
+          état dans « Mes demandes ».
         </p>
       )}
 
@@ -1037,6 +1117,306 @@ function HubTripCard({
         </p>
       )}
     </li>
+  )
+}
+
+// ---------------------------------------------------------------------
+// Meeting Points (Doc1 §12.1) : définis par les admins du hub, visibles
+// par tous les membres validés. Le conducteur peut en choisir un à la
+// publication d'un trajet (modale de /semaine). Un seul point par
+// défaut par hub, garanti par un index partiel en base.
+// ---------------------------------------------------------------------
+function MeetingPointsSection({
+  hubId,
+  isAdmin,
+  meetingPoints,
+  photoUrls,
+  onChanged,
+}: {
+  hubId: string
+  isAdmin: boolean
+  meetingPoints: Array<MeetingPoint>
+  photoUrls: Record<string, string>
+  onChanged: () => void
+}) {
+  const [adding, setAdding] = useState(false)
+  const [label, setLabel] = useState('')
+  const [description, setDescription] = useState('')
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+
+  async function addPoint(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError(null)
+
+    if (photoFile && photoFile.size > 5 * 1024 * 1024) {
+      setError('La photo dépasse 5 Mo.')
+      return
+    }
+    setSubmitting(true)
+
+    // Le premier point du hub devient le point par défaut.
+    const { data: created, error: insertError } = await supabase
+      .from('meeting_points')
+      .insert({
+        hub_id: hubId,
+        label: label.trim(),
+        description: description.trim() === '' ? null : description.trim(),
+        is_default: meetingPoints.length === 0,
+      })
+      .select('id')
+      .single()
+
+    if (insertError) {
+      setError(insertError.message)
+      setSubmitting(false)
+      return
+    }
+
+    if (photoFile) {
+      const ext = photoFile.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+      const path = `${hubId}/${created.id}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from(MP_PHOTO_BUCKET)
+        .upload(path, photoFile, { upsert: true })
+
+      if (uploadError) {
+        setError(
+          `Le point est créé mais la photo n’a pas pu être enregistrée : ${uploadError.message}`,
+        )
+      } else {
+        const { error: updateError } = await supabase
+          .from('meeting_points')
+          .update({ photo_url: path })
+          .eq('id', created.id)
+        if (updateError) {
+          setError(
+            `Le point est créé mais la photo n’a pas pu être liée : ${updateError.message}`,
+          )
+        }
+      }
+    }
+
+    setSubmitting(false)
+    setAdding(false)
+    setLabel('')
+    setDescription('')
+    setPhotoFile(null)
+    onChanged()
+  }
+
+  async function setDefault(id: string) {
+    setError(null)
+    const { error: rpcError } = await supabase.rpc(
+      'meeting_point_set_default',
+      {
+        p_meeting_point: id,
+      },
+    )
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    onChanged()
+  }
+
+  async function deletePoint(mp: MeetingPoint) {
+    setError(null)
+    // Suppression Storage EXPLICITE avant la ligne : le cascade SQL ne
+    // supprime jamais les objets Storage (même règle que les photos
+    // d'enfants).
+    if (mp.photo_url) {
+      const { error: removeError } = await supabase.storage
+        .from(MP_PHOTO_BUCKET)
+        .remove([mp.photo_url])
+      if (removeError) {
+        setError(`La photo n’a pas pu être supprimée : ${removeError.message}`)
+        return
+      }
+    }
+    const { error: deleteError } = await supabase
+      .from('meeting_points')
+      .delete()
+      .eq('id', mp.id)
+    if (deleteError) {
+      setError(deleteError.message)
+      return
+    }
+    setConfirmDeleteId(null)
+    onChanged()
+  }
+
+  if (!isAdmin && meetingPoints.length === 0) {
+    return null
+  }
+
+  return (
+    <>
+      <h3 className="mt-6 text-sm font-medium text-gray-700">
+        Points de rendez-vous
+      </h3>
+      {meetingPoints.length === 0 ? (
+        <p className="mt-2 text-sm text-gray-500">
+          Aucun point de rendez-vous défini. Un lieu connu de tous simplifie les
+          dépôts et les récupérations.
+        </p>
+      ) : (
+        <ul className="mt-2 divide-y divide-gray-100">
+          {meetingPoints.map((mp) => (
+            <li key={mp.id} className="flex items-start gap-3 py-3">
+              {photoUrls[mp.id] && (
+                <img
+                  src={photoUrls[mp.id]}
+                  alt={`Photo du point de rendez-vous ${mp.label}`}
+                  className="h-12 w-12 shrink-0 rounded-md object-cover"
+                />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-gray-900">
+                  {mp.label}
+                  {mp.is_default && (
+                    <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800">
+                      Par défaut
+                    </span>
+                  )}
+                </p>
+                {mp.description && (
+                  <p className="text-sm text-gray-500">{mp.description}</p>
+                )}
+              </div>
+              {isAdmin && (
+                <div className="flex shrink-0 gap-2">
+                  {!mp.is_default && (
+                    <button
+                      type="button"
+                      onClick={() => void setDefault(mp.id)}
+                      className="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100"
+                    >
+                      Définir par défaut
+                    </button>
+                  )}
+                  {confirmDeleteId === mp.id ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => void deletePoint(mp)}
+                        className="rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700"
+                      >
+                        Confirmer
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100"
+                      >
+                        Annuler
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDeleteId(mp.id)}
+                      className="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
+                    >
+                      Supprimer
+                    </button>
+                  )}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {isAdmin && !adding && (
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="mt-2 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
+        >
+          Ajouter un point de rendez-vous
+        </button>
+      )}
+
+      {isAdmin && adding && (
+        <form
+          onSubmit={(e) => void addPoint(e)}
+          className="mt-3 space-y-3 rounded-md border border-gray-200 p-4"
+        >
+          <div>
+            <label
+              htmlFor="mp-label"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Libellé
+            </label>
+            <input
+              id="mp-label"
+              type="text"
+              required
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="Parking de l’école, entrée rue des Tilleuls"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="mp-description"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Description (optionnelle)
+            </label>
+            <textarea
+              id="mp-description"
+              rows={2}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="mp-photo"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Photo (optionnelle)
+            </label>
+            <input
+              id="mp-photo"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)}
+              className="mt-1 w-full text-sm text-gray-700"
+            />
+          </div>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setAdding(false)}
+              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={submitting || label.trim() === ''}
+              className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {submitting ? 'Enregistrement…' : 'Ajouter'}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {error && (
+        <p className="mt-2 rounded-md bg-red-50 p-3 text-sm text-red-800">
+          Une erreur est survenue : {error}
+        </p>
+      )}
+    </>
   )
 }
 
@@ -1272,8 +1652,8 @@ function JoinHubForm({
             <div className="mt-4 rounded-md border border-gray-200 p-4">
               {alreadyMemberHubIds.includes(foundHub.id) ? (
                 <p className="text-sm text-gray-600">
-                  Vous êtes déjà membre de « {foundHub.name} », ou votre
-                  demande est déjà en attente.
+                  Vous êtes déjà membre de « {foundHub.name} », ou votre demande
+                  est déjà en attente.
                 </p>
               ) : (
                 <>
