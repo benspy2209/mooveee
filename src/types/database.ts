@@ -1544,6 +1544,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      mooves_grant_initial_balance: {
+        Args: { p_user: string }
+        Returns: undefined
+      }
       trip_child_household_match: {
         Args: { p_child: string; p_trip: string }
         Returns: boolean
