@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: '14.15'
+    PostgrestVersion: "14.15"
   }
   public: {
     Tables: {
@@ -59,25 +59,25 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'activities_child_id_fkey'
-            columns: ['child_id']
+            foreignKeyName: "activities_child_id_fkey"
+            columns: ["child_id"]
             isOneToOne: false
-            referencedRelation: 'children'
-            referencedColumns: ['id']
+            referencedRelation: "children"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'activities_household_id_fkey'
-            columns: ['household_id']
+            foreignKeyName: "activities_household_id_fkey"
+            columns: ["household_id"]
             isOneToOne: false
-            referencedRelation: 'households'
-            referencedColumns: ['id']
+            referencedRelation: "households"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'activities_hub_id_fkey'
-            columns: ['hub_id']
+            foreignKeyName: "activities_hub_id_fkey"
+            columns: ["hub_id"]
             isOneToOne: false
-            referencedRelation: 'hubs'
-            referencedColumns: ['id']
+            referencedRelation: "hubs"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -138,11 +138,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'children_household_id_fkey'
-            columns: ['household_id']
+            foreignKeyName: "children_household_id_fkey"
+            columns: ["household_id"]
             isOneToOne: false
-            referencedRelation: 'households'
-            referencedColumns: ['id']
+            referencedRelation: "households"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -153,7 +153,7 @@ export type Database = {
           id: string
           policy_version: string
           revoked_at: string | null
-          type: Database['public']['Enums']['consent_type']
+          type: Database["public"]["Enums"]["consent_type"]
           user_id: string
         }
         Insert: {
@@ -162,7 +162,7 @@ export type Database = {
           id?: string
           policy_version: string
           revoked_at?: string | null
-          type: Database['public']['Enums']['consent_type']
+          type: Database["public"]["Enums"]["consent_type"]
           user_id: string
         }
         Update: {
@@ -171,16 +171,16 @@ export type Database = {
           id?: string
           policy_version?: string
           revoked_at?: string | null
-          type?: Database['public']['Enums']['consent_type']
+          type?: Database["public"]["Enums"]["consent_type"]
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: 'consents_user_id_fkey'
-            columns: ['user_id']
+            foreignKeyName: "consents_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -217,25 +217,25 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'defraiement_records_trip_id_fkey'
-            columns: ['trip_id']
+            foreignKeyName: "defraiement_records_trip_id_fkey"
+            columns: ["trip_id"]
             isOneToOne: false
-            referencedRelation: 'hub_trips_view'
-            referencedColumns: ['id']
+            referencedRelation: "hub_trips_view"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'defraiement_records_trip_id_fkey'
-            columns: ['trip_id']
+            foreignKeyName: "defraiement_records_trip_id_fkey"
+            columns: ["trip_id"]
             isOneToOne: false
-            referencedRelation: 'trips'
-            referencedColumns: ['id']
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'defraiement_records_volunteer_recognition_id_fkey'
-            columns: ['volunteer_recognition_id']
+            foreignKeyName: "defraiement_records_volunteer_recognition_id_fkey"
+            columns: ["volunteer_recognition_id"]
             isOneToOne: false
-            referencedRelation: 'volunteer_recognitions'
-            referencedColumns: ['id']
+            referencedRelation: "volunteer_recognitions"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -246,7 +246,7 @@ export type Database = {
           household_id: string
           id: string
           invited_by: string
-          role: Database['public']['Enums']['household_role']
+          role: Database["public"]["Enums"]["household_role"]
           status: string
         }
         Insert: {
@@ -255,7 +255,7 @@ export type Database = {
           household_id: string
           id?: string
           invited_by: string
-          role?: Database['public']['Enums']['household_role']
+          role?: Database["public"]["Enums"]["household_role"]
           status?: string
         }
         Update: {
@@ -264,23 +264,23 @@ export type Database = {
           household_id?: string
           id?: string
           invited_by?: string
-          role?: Database['public']['Enums']['household_role']
+          role?: Database["public"]["Enums"]["household_role"]
           status?: string
         }
         Relationships: [
           {
-            foreignKeyName: 'household_invitations_household_id_fkey'
-            columns: ['household_id']
+            foreignKeyName: "household_invitations_household_id_fkey"
+            columns: ["household_id"]
             isOneToOne: false
-            referencedRelation: 'households'
-            referencedColumns: ['id']
+            referencedRelation: "households"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'household_invitations_invited_by_fkey'
-            columns: ['invited_by']
+            foreignKeyName: "household_invitations_invited_by_fkey"
+            columns: ["invited_by"]
             isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -290,7 +290,7 @@ export type Database = {
           id: string
           is_admin: boolean
           joined_at: string
-          role: Database['public']['Enums']['household_role']
+          role: Database["public"]["Enums"]["household_role"]
           user_id: string
         }
         Insert: {
@@ -298,7 +298,7 @@ export type Database = {
           id?: string
           is_admin?: boolean
           joined_at?: string
-          role: Database['public']['Enums']['household_role']
+          role: Database["public"]["Enums"]["household_role"]
           user_id: string
         }
         Update: {
@@ -306,23 +306,23 @@ export type Database = {
           id?: string
           is_admin?: boolean
           joined_at?: string
-          role?: Database['public']['Enums']['household_role']
+          role?: Database["public"]["Enums"]["household_role"]
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: 'household_members_household_id_fkey'
-            columns: ['household_id']
+            foreignKeyName: "household_members_household_id_fkey"
+            columns: ["household_id"]
             isOneToOne: false
-            referencedRelation: 'households'
-            referencedColumns: ['id']
+            referencedRelation: "households"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'household_members_user_id_fkey'
-            columns: ['user_id']
+            foreignKeyName: "household_members_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -350,11 +350,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'households_created_by_fkey'
-            columns: ['created_by']
+            foreignKeyName: "households_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -388,18 +388,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'hub_bridges_source_hub_id_fkey'
-            columns: ['source_hub_id']
+            foreignKeyName: "hub_bridges_source_hub_id_fkey"
+            columns: ["source_hub_id"]
             isOneToOne: false
-            referencedRelation: 'hubs'
-            referencedColumns: ['id']
+            referencedRelation: "hubs"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'hub_bridges_target_hub_id_fkey'
-            columns: ['target_hub_id']
+            foreignKeyName: "hub_bridges_target_hub_id_fkey"
+            columns: ["target_hub_id"]
             isOneToOne: false
-            referencedRelation: 'hubs'
-            referencedColumns: ['id']
+            referencedRelation: "hubs"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -433,25 +433,25 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'hub_members_household_id_fkey'
-            columns: ['household_id']
+            foreignKeyName: "hub_members_household_id_fkey"
+            columns: ["household_id"]
             isOneToOne: false
-            referencedRelation: 'households'
-            referencedColumns: ['id']
+            referencedRelation: "households"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'hub_members_hub_id_fkey'
-            columns: ['hub_id']
+            foreignKeyName: "hub_members_hub_id_fkey"
+            columns: ["hub_id"]
             isOneToOne: false
-            referencedRelation: 'hubs'
-            referencedColumns: ['id']
+            referencedRelation: "hubs"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'hub_members_user_id_fkey'
-            columns: ['user_id']
+            foreignKeyName: "hub_members_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -479,18 +479,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'hub_pact_acceptances_hub_id_fkey'
-            columns: ['hub_id']
+            foreignKeyName: "hub_pact_acceptances_hub_id_fkey"
+            columns: ["hub_id"]
             isOneToOne: false
-            referencedRelation: 'hubs'
-            referencedColumns: ['id']
+            referencedRelation: "hubs"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'hub_pact_acceptances_user_id_fkey'
-            columns: ['user_id']
+            foreignKeyName: "hub_pact_acceptances_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -502,14 +502,14 @@ export type Database = {
           id: string
           institution_id: string | null
           join_code: string
-          kind: Database['public']['Enums']['hub_kind']
+          kind: Database["public"]["Enums"]["hub_kind"]
           municipality: string
           name: string
           owner_id: string
           place_label: string
           place_lat: number | null
           place_lng: number | null
-          status: Database['public']['Enums']['hub_status']
+          status: Database["public"]["Enums"]["hub_status"]
         }
         Insert: {
           activated_at?: string | null
@@ -518,14 +518,14 @@ export type Database = {
           id?: string
           institution_id?: string | null
           join_code: string
-          kind: Database['public']['Enums']['hub_kind']
+          kind: Database["public"]["Enums"]["hub_kind"]
           municipality: string
           name: string
           owner_id: string
           place_label: string
           place_lat?: number | null
           place_lng?: number | null
-          status?: Database['public']['Enums']['hub_status']
+          status?: Database["public"]["Enums"]["hub_status"]
         }
         Update: {
           activated_at?: string | null
@@ -534,29 +534,29 @@ export type Database = {
           id?: string
           institution_id?: string | null
           join_code?: string
-          kind?: Database['public']['Enums']['hub_kind']
+          kind?: Database["public"]["Enums"]["hub_kind"]
           municipality?: string
           name?: string
           owner_id?: string
           place_label?: string
           place_lat?: number | null
           place_lng?: number | null
-          status?: Database['public']['Enums']['hub_status']
+          status?: Database["public"]["Enums"]["hub_status"]
         }
         Relationships: [
           {
-            foreignKeyName: 'hubs_institution_id_fkey'
-            columns: ['institution_id']
+            foreignKeyName: "hubs_institution_id_fkey"
+            columns: ["institution_id"]
             isOneToOne: false
-            referencedRelation: 'institutions'
-            referencedColumns: ['id']
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'hubs_owner_id_fkey'
-            columns: ['owner_id']
+            foreignKeyName: "hubs_owner_id_fkey"
+            columns: ["owner_id"]
             isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -596,11 +596,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'impact_snapshots_hub_id_fkey'
-            columns: ['hub_id']
+            foreignKeyName: "impact_snapshots_hub_id_fkey"
+            columns: ["hub_id"]
             isOneToOne: false
-            referencedRelation: 'hubs'
-            referencedColumns: ['id']
+            referencedRelation: "hubs"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -637,11 +637,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'institution_usage_metrics_institution_id_fkey'
-            columns: ['institution_id']
+            foreignKeyName: "institution_usage_metrics_institution_id_fkey"
+            columns: ["institution_id"]
             isOneToOne: false
-            referencedRelation: 'institutions'
-            referencedColumns: ['id']
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -675,25 +675,25 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'institutional_messages_author_id_fkey'
-            columns: ['author_id']
+            foreignKeyName: "institutional_messages_author_id_fkey"
+            columns: ["author_id"]
             isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'institutional_messages_hub_id_fkey'
-            columns: ['hub_id']
+            foreignKeyName: "institutional_messages_hub_id_fkey"
+            columns: ["hub_id"]
             isOneToOne: false
-            referencedRelation: 'hubs'
-            referencedColumns: ['id']
+            referencedRelation: "hubs"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'institutional_messages_institution_id_fkey'
-            columns: ['institution_id']
+            foreignKeyName: "institutional_messages_institution_id_fkey"
+            columns: ["institution_id"]
             isOneToOne: false
-            referencedRelation: 'institutions'
-            referencedColumns: ['id']
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -763,11 +763,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'meeting_points_hub_id_fkey'
-            columns: ['hub_id']
+            foreignKeyName: "meeting_points_hub_id_fkey"
+            columns: ["hub_id"]
             isOneToOne: false
-            referencedRelation: 'hubs'
-            referencedColumns: ['id']
+            referencedRelation: "hubs"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -775,7 +775,7 @@ export type Database = {
         Row: {
           author_id: string
           body: string
-          channel: Database['public']['Enums']['channel_type']
+          channel: Database["public"]["Enums"]["channel_type"]
           created_at: string
           household_id: string | null
           hub_id: string | null
@@ -785,7 +785,7 @@ export type Database = {
         Insert: {
           author_id: string
           body: string
-          channel: Database['public']['Enums']['channel_type']
+          channel: Database["public"]["Enums"]["channel_type"]
           created_at?: string
           household_id?: string | null
           hub_id?: string | null
@@ -795,7 +795,7 @@ export type Database = {
         Update: {
           author_id?: string
           body?: string
-          channel?: Database['public']['Enums']['channel_type']
+          channel?: Database["public"]["Enums"]["channel_type"]
           created_at?: string
           household_id?: string | null
           hub_id?: string | null
@@ -804,39 +804,39 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'messages_author_id_fkey'
-            columns: ['author_id']
+            foreignKeyName: "messages_author_id_fkey"
+            columns: ["author_id"]
             isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'messages_household_id_fkey'
-            columns: ['household_id']
+            foreignKeyName: "messages_household_id_fkey"
+            columns: ["household_id"]
             isOneToOne: false
-            referencedRelation: 'households'
-            referencedColumns: ['id']
+            referencedRelation: "households"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'messages_hub_id_fkey'
-            columns: ['hub_id']
+            foreignKeyName: "messages_hub_id_fkey"
+            columns: ["hub_id"]
             isOneToOne: false
-            referencedRelation: 'hubs'
-            referencedColumns: ['id']
+            referencedRelation: "hubs"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'messages_trip_id_fkey'
-            columns: ['trip_id']
+            foreignKeyName: "messages_trip_id_fkey"
+            columns: ["trip_id"]
             isOneToOne: false
-            referencedRelation: 'hub_trips_view'
-            referencedColumns: ['id']
+            referencedRelation: "hub_trips_view"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'messages_trip_id_fkey'
-            columns: ['trip_id']
+            foreignKeyName: "messages_trip_id_fkey"
+            columns: ["trip_id"]
             isOneToOne: false
-            referencedRelation: 'trips'
-            referencedColumns: ['id']
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -858,11 +858,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'mooves_balance_user_id_fkey'
-            columns: ['user_id']
+            foreignKeyName: "mooves_balance_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: true
-            referencedRelation: 'users'
-            referencedColumns: ['id']
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -872,7 +872,7 @@ export type Database = {
           created_at: string
           grant_id: string | null
           id: string
-          movement: Database['public']['Enums']['moove_movement']
+          movement: Database["public"]["Enums"]["moove_movement"]
           reason: string | null
           trip_id: string | null
           user_id: string
@@ -882,7 +882,7 @@ export type Database = {
           created_at?: string
           grant_id?: string | null
           id?: string
-          movement: Database['public']['Enums']['moove_movement']
+          movement: Database["public"]["Enums"]["moove_movement"]
           reason?: string | null
           trip_id?: string | null
           user_id: string
@@ -892,32 +892,32 @@ export type Database = {
           created_at?: string
           grant_id?: string | null
           id?: string
-          movement?: Database['public']['Enums']['moove_movement']
+          movement?: Database["public"]["Enums"]["moove_movement"]
           reason?: string | null
           trip_id?: string | null
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: 'mooves_ledger_trip_id_fkey'
-            columns: ['trip_id']
+            foreignKeyName: "mooves_ledger_trip_id_fkey"
+            columns: ["trip_id"]
             isOneToOne: false
-            referencedRelation: 'hub_trips_view'
-            referencedColumns: ['id']
+            referencedRelation: "hub_trips_view"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'mooves_ledger_trip_id_fkey'
-            columns: ['trip_id']
+            foreignKeyName: "mooves_ledger_trip_id_fkey"
+            columns: ["trip_id"]
             isOneToOne: false
-            referencedRelation: 'trips'
-            referencedColumns: ['id']
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'mooves_ledger_user_id_fkey'
-            columns: ['user_id']
+            foreignKeyName: "mooves_ledger_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -930,7 +930,7 @@ export type Database = {
           id: string
           involves_minor: boolean
           reporter_id: string
-          status: Database['public']['Enums']['report_status']
+          status: Database["public"]["Enums"]["report_status"]
           target_user_id: string | null
           trip_id: string | null
         }
@@ -942,7 +942,7 @@ export type Database = {
           id?: string
           involves_minor?: boolean
           reporter_id: string
-          status?: Database['public']['Enums']['report_status']
+          status?: Database["public"]["Enums"]["report_status"]
           target_user_id?: string | null
           trip_id?: string | null
         }
@@ -954,45 +954,45 @@ export type Database = {
           id?: string
           involves_minor?: boolean
           reporter_id?: string
-          status?: Database['public']['Enums']['report_status']
+          status?: Database["public"]["Enums"]["report_status"]
           target_user_id?: string | null
           trip_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: 'reports_hub_id_fkey'
-            columns: ['hub_id']
+            foreignKeyName: "reports_hub_id_fkey"
+            columns: ["hub_id"]
             isOneToOne: false
-            referencedRelation: 'hubs'
-            referencedColumns: ['id']
+            referencedRelation: "hubs"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'reports_reporter_id_fkey'
-            columns: ['reporter_id']
+            foreignKeyName: "reports_reporter_id_fkey"
+            columns: ["reporter_id"]
             isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'reports_target_user_id_fkey'
-            columns: ['target_user_id']
+            foreignKeyName: "reports_target_user_id_fkey"
+            columns: ["target_user_id"]
             isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'reports_trip_id_fkey'
-            columns: ['trip_id']
+            foreignKeyName: "reports_trip_id_fkey"
+            columns: ["trip_id"]
             isOneToOne: false
-            referencedRelation: 'hub_trips_view'
-            referencedColumns: ['id']
+            referencedRelation: "hub_trips_view"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'reports_trip_id_fkey'
-            columns: ['trip_id']
+            foreignKeyName: "reports_trip_id_fkey"
+            columns: ["trip_id"]
             isOneToOne: false
-            referencedRelation: 'trips'
-            referencedColumns: ['id']
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1029,25 +1029,25 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'solidarity_fund_grants_beneficiary_id_fkey'
-            columns: ['beneficiary_id']
+            foreignKeyName: "solidarity_fund_grants_beneficiary_id_fkey"
+            columns: ["beneficiary_id"]
             isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'solidarity_fund_grants_granted_by_fkey'
-            columns: ['granted_by']
+            foreignKeyName: "solidarity_fund_grants_granted_by_fkey"
+            columns: ["granted_by"]
             isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'solidarity_fund_grants_institution_id_fkey'
-            columns: ['institution_id']
+            foreignKeyName: "solidarity_fund_grants_institution_id_fkey"
+            columns: ["institution_id"]
             isOneToOne: false
-            referencedRelation: 'institutions'
-            referencedColumns: ['id']
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1066,25 +1066,25 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'trip_children_child_id_fkey'
-            columns: ['child_id']
+            foreignKeyName: "trip_children_child_id_fkey"
+            columns: ["child_id"]
             isOneToOne: false
-            referencedRelation: 'children'
-            referencedColumns: ['id']
+            referencedRelation: "children"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'trip_children_trip_id_fkey'
-            columns: ['trip_id']
+            foreignKeyName: "trip_children_trip_id_fkey"
+            columns: ["trip_id"]
             isOneToOne: false
-            referencedRelation: 'hub_trips_view'
-            referencedColumns: ['id']
+            referencedRelation: "hub_trips_view"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'trip_children_trip_id_fkey'
-            columns: ['trip_id']
+            foreignKeyName: "trip_children_trip_id_fkey"
+            columns: ["trip_id"]
             isOneToOne: false
-            referencedRelation: 'trips'
-            referencedColumns: ['id']
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1112,32 +1112,32 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: 'trip_dropoff_confirmations_child_id_fkey'
-            columns: ['child_id']
+            foreignKeyName: "trip_dropoff_confirmations_child_id_fkey"
+            columns: ["child_id"]
             isOneToOne: false
-            referencedRelation: 'children'
-            referencedColumns: ['id']
+            referencedRelation: "children"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'trip_dropoff_confirmations_confirmed_by_fkey'
-            columns: ['confirmed_by']
+            foreignKeyName: "trip_dropoff_confirmations_confirmed_by_fkey"
+            columns: ["confirmed_by"]
             isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'trip_dropoff_confirmations_trip_id_fkey'
-            columns: ['trip_id']
+            foreignKeyName: "trip_dropoff_confirmations_trip_id_fkey"
+            columns: ["trip_id"]
             isOneToOne: false
-            referencedRelation: 'hub_trips_view'
-            referencedColumns: ['id']
+            referencedRelation: "hub_trips_view"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'trip_dropoff_confirmations_trip_id_fkey'
-            columns: ['trip_id']
+            foreignKeyName: "trip_dropoff_confirmations_trip_id_fkey"
+            columns: ["trip_id"]
             isOneToOne: false
-            referencedRelation: 'trips'
-            referencedColumns: ['id']
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1150,7 +1150,7 @@ export type Database = {
           requester_household_id: string
           requester_id: string
           responded_at: string | null
-          status: Database['public']['Enums']['trip_request_status']
+          status: Database["public"]["Enums"]["trip_request_status"]
           trip_id: string
         }
         Insert: {
@@ -1161,7 +1161,7 @@ export type Database = {
           requester_household_id: string
           requester_id: string
           responded_at?: string | null
-          status?: Database['public']['Enums']['trip_request_status']
+          status?: Database["public"]["Enums"]["trip_request_status"]
           trip_id: string
         }
         Update: {
@@ -1172,44 +1172,44 @@ export type Database = {
           requester_household_id?: string
           requester_id?: string
           responded_at?: string | null
-          status?: Database['public']['Enums']['trip_request_status']
+          status?: Database["public"]["Enums"]["trip_request_status"]
           trip_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: 'trip_requests_child_id_fkey'
-            columns: ['child_id']
+            foreignKeyName: "trip_requests_child_id_fkey"
+            columns: ["child_id"]
             isOneToOne: false
-            referencedRelation: 'children'
-            referencedColumns: ['id']
+            referencedRelation: "children"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'trip_requests_requester_household_id_fkey'
-            columns: ['requester_household_id']
+            foreignKeyName: "trip_requests_requester_household_id_fkey"
+            columns: ["requester_household_id"]
             isOneToOne: false
-            referencedRelation: 'households'
-            referencedColumns: ['id']
+            referencedRelation: "households"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'trip_requests_requester_id_fkey'
-            columns: ['requester_id']
+            foreignKeyName: "trip_requests_requester_id_fkey"
+            columns: ["requester_id"]
             isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'trip_requests_trip_id_fkey'
-            columns: ['trip_id']
+            foreignKeyName: "trip_requests_trip_id_fkey"
+            columns: ["trip_id"]
             isOneToOne: false
-            referencedRelation: 'hub_trips_view'
-            referencedColumns: ['id']
+            referencedRelation: "hub_trips_view"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'trip_requests_trip_id_fkey'
-            columns: ['trip_id']
+            foreignKeyName: "trip_requests_trip_id_fkey"
+            columns: ["trip_id"]
             isOneToOne: false
-            referencedRelation: 'trips'
-            referencedColumns: ['id']
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1220,7 +1220,7 @@ export type Database = {
           destination_label: string | null
           destination_lat: number | null
           destination_lng: number | null
-          direction: Database['public']['Enums']['trip_direction']
+          direction: Database["public"]["Enums"]["trip_direction"]
           distance_km: number | null
           driver_id: string | null
           household_id: string
@@ -1235,7 +1235,7 @@ export type Database = {
           scheduled_at: string
           seats_available: number | null
           seats_total: number | null
-          status: Database['public']['Enums']['trip_status']
+          status: Database["public"]["Enums"]["trip_status"]
           updated_at: string
         }
         Insert: {
@@ -1244,7 +1244,7 @@ export type Database = {
           destination_label?: string | null
           destination_lat?: number | null
           destination_lng?: number | null
-          direction: Database['public']['Enums']['trip_direction']
+          direction: Database["public"]["Enums"]["trip_direction"]
           distance_km?: number | null
           driver_id?: string | null
           household_id: string
@@ -1259,7 +1259,7 @@ export type Database = {
           scheduled_at: string
           seats_available?: number | null
           seats_total?: number | null
-          status?: Database['public']['Enums']['trip_status']
+          status?: Database["public"]["Enums"]["trip_status"]
           updated_at?: string
         }
         Update: {
@@ -1268,7 +1268,7 @@ export type Database = {
           destination_label?: string | null
           destination_lat?: number | null
           destination_lng?: number | null
-          direction?: Database['public']['Enums']['trip_direction']
+          direction?: Database["public"]["Enums"]["trip_direction"]
           distance_km?: number | null
           driver_id?: string | null
           household_id?: string
@@ -1283,44 +1283,44 @@ export type Database = {
           scheduled_at?: string
           seats_available?: number | null
           seats_total?: number | null
-          status?: Database['public']['Enums']['trip_status']
+          status?: Database["public"]["Enums"]["trip_status"]
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: 'trips_activity_id_fkey'
-            columns: ['activity_id']
+            foreignKeyName: "trips_activity_id_fkey"
+            columns: ["activity_id"]
             isOneToOne: false
-            referencedRelation: 'activities'
-            referencedColumns: ['id']
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'trips_driver_id_fkey'
-            columns: ['driver_id']
+            foreignKeyName: "trips_driver_id_fkey"
+            columns: ["driver_id"]
             isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'trips_household_id_fkey'
-            columns: ['household_id']
+            foreignKeyName: "trips_household_id_fkey"
+            columns: ["household_id"]
             isOneToOne: false
-            referencedRelation: 'households'
-            referencedColumns: ['id']
+            referencedRelation: "households"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'trips_hub_id_fkey'
-            columns: ['hub_id']
+            foreignKeyName: "trips_hub_id_fkey"
+            columns: ["hub_id"]
             isOneToOne: false
-            referencedRelation: 'hubs'
-            referencedColumns: ['id']
+            referencedRelation: "hubs"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'trips_meeting_point_id_fkey'
-            columns: ['meeting_point_id']
+            foreignKeyName: "trips_meeting_point_id_fkey"
+            columns: ["meeting_point_id"]
             isOneToOne: false
-            referencedRelation: 'meeting_points'
-            referencedColumns: ['id']
+            referencedRelation: "meeting_points"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1370,7 +1370,7 @@ export type Database = {
           user_id: string
           valid_from: string
           valid_until: string | null
-          vector_type: Database['public']['Enums']['volunteer_vector']
+          vector_type: Database["public"]["Enums"]["volunteer_vector"]
         }
         Insert: {
           created_at?: string
@@ -1381,7 +1381,7 @@ export type Database = {
           user_id: string
           valid_from: string
           valid_until?: string | null
-          vector_type: Database['public']['Enums']['volunteer_vector']
+          vector_type: Database["public"]["Enums"]["volunteer_vector"]
         }
         Update: {
           created_at?: string
@@ -1392,22 +1392,22 @@ export type Database = {
           user_id?: string
           valid_from?: string
           valid_until?: string | null
-          vector_type?: Database['public']['Enums']['volunteer_vector']
+          vector_type?: Database["public"]["Enums"]["volunteer_vector"]
         }
         Relationships: [
           {
-            foreignKeyName: 'volunteer_recognitions_institution_id_fkey'
-            columns: ['institution_id']
+            foreignKeyName: "volunteer_recognitions_institution_id_fkey"
+            columns: ["institution_id"]
             isOneToOne: false
-            referencedRelation: 'institutions'
-            referencedColumns: ['id']
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'volunteer_recognitions_user_id_fkey'
-            columns: ['user_id']
+            foreignKeyName: "volunteer_recognitions_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1417,7 +1417,7 @@ export type Database = {
         Row: {
           children_count: number | null
           destination_label: string | null
-          direction: Database['public']['Enums']['trip_direction'] | null
+          direction: Database["public"]["Enums"]["trip_direction"] | null
           driver_first_name: string | null
           driver_id: string | null
           hub_id: string | null
@@ -1426,12 +1426,12 @@ export type Database = {
           origin_label: string | null
           scheduled_at: string | null
           seats_available: number | null
-          status: Database['public']['Enums']['trip_status'] | null
+          status: Database["public"]["Enums"]["trip_status"] | null
         }
         Insert: {
           children_count?: never
           destination_label?: string | null
-          direction?: Database['public']['Enums']['trip_direction'] | null
+          direction?: Database["public"]["Enums"]["trip_direction"] | null
           driver_first_name?: never
           driver_id?: string | null
           hub_id?: string | null
@@ -1440,12 +1440,12 @@ export type Database = {
           origin_label?: string | null
           scheduled_at?: string | null
           seats_available?: number | null
-          status?: Database['public']['Enums']['trip_status'] | null
+          status?: Database["public"]["Enums"]["trip_status"] | null
         }
         Update: {
           children_count?: never
           destination_label?: string | null
-          direction?: Database['public']['Enums']['trip_direction'] | null
+          direction?: Database["public"]["Enums"]["trip_direction"] | null
           driver_first_name?: never
           driver_id?: string | null
           hub_id?: string | null
@@ -1454,29 +1454,29 @@ export type Database = {
           origin_label?: string | null
           scheduled_at?: string | null
           seats_available?: number | null
-          status?: Database['public']['Enums']['trip_status'] | null
+          status?: Database["public"]["Enums"]["trip_status"] | null
         }
         Relationships: [
           {
-            foreignKeyName: 'trips_driver_id_fkey'
-            columns: ['driver_id']
+            foreignKeyName: "trips_driver_id_fkey"
+            columns: ["driver_id"]
             isOneToOne: false
-            referencedRelation: 'users'
-            referencedColumns: ['id']
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'trips_hub_id_fkey'
-            columns: ['hub_id']
+            foreignKeyName: "trips_hub_id_fkey"
+            columns: ["hub_id"]
             isOneToOne: false
-            referencedRelation: 'hubs'
-            referencedColumns: ['id']
+            referencedRelation: "hubs"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'trips_meeting_point_id_fkey'
-            columns: ['meeting_point_id']
+            foreignKeyName: "trips_meeting_point_id_fkey"
+            columns: ["meeting_point_id"]
             isOneToOne: false
-            referencedRelation: 'meeting_points'
-            referencedColumns: ['id']
+            referencedRelation: "meeting_points"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1497,7 +1497,7 @@ export type Database = {
         Args: { p_code: string }
         Returns: {
           id: string
-          kind: Database['public']['Enums']['hub_kind']
+          kind: Database["public"]["Enums"]["hub_kind"]
           municipality: string
           name: string
         }[]
@@ -1527,7 +1527,7 @@ export type Database = {
         Args: {
           p_amount: number
           p_grant?: string
-          p_movement: Database['public']['Enums']['moove_movement']
+          p_movement: Database["public"]["Enums"]["moove_movement"]
           p_reason?: string
           p_trip?: string
           p_user: string
@@ -1561,31 +1561,42 @@ export type Database = {
       }
     }
     Enums: {
-      channel_type: 'cercle_intime' | 'hub' | 'broadcast_institutionnel'
+      channel_type: "cercle_intime" | "hub" | "broadcast_institutionnel"
       consent_type:
-        | 'inscription'
-        | 'cercle_intime'
-        | 'hub'
-        | 'communications_institutionnelles'
-        | 'photo_enfant'
+        | "inscription"
+        | "cercle_intime"
+        | "hub"
+        | "communications_institutionnelles"
+        | "photo_enfant"
       household_role:
-        'parent' | 'beau_parent' | 'grand_parent' | 'autre_referent'
-      hub_kind: 'ecole' | 'club' | 'quartier' | 'conservatoire' | 'autre'
-      hub_status: 'solo' | 'active' | 'structured'
+        | "parent"
+        | "beau_parent"
+        | "grand_parent"
+        | "autre_referent"
+      hub_kind: "ecole" | "club" | "quartier" | "conservatoire" | "autre"
+      hub_status: "solo" | "active" | "structured"
       moove_movement:
-        'gain' | 'usage' | 'ajustement' | 'fonds_solidarite' | 'solde_initial'
-      report_status: 'ouvert' | 'en_cours' | 'resolu' | 'clos'
-      trip_direction: 'aller' | 'retour'
+        | "gain"
+        | "usage"
+        | "ajustement"
+        | "fonds_solidarite"
+        | "solde_initial"
+      report_status: "ouvert" | "en_cours" | "resolu" | "clos"
+      trip_direction: "aller" | "retour"
       trip_request_status:
-        'en_attente' | 'accepte' | 'refuse' | 'annule' | 'expire'
+        | "en_attente"
+        | "accepte"
+        | "refuse"
+        | "annule"
+        | "expire"
       trip_status:
-        | 'couvert'
-        | 'couvert_ouvert'
-        | 'partiellement_couvert'
-        | 'conditionnel'
-        | 'non_couvert'
-        | 'annule'
-      volunteer_vector: 'club' | 'po_ecole' | 'commune' | 'association_parents'
+        | "couvert"
+        | "couvert_ouvert"
+        | "partiellement_couvert"
+        | "conditionnel"
+        | "non_couvert"
+        | "annule"
+      volunteer_vector: "club" | "po_ecole" | "commune" | "association_parents"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1593,33 +1604,33 @@ export type Database = {
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, '__InternalSupabase'>
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, 'public'>]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])
-    : never) = never,
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])[TableName] extends {
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema['Tables'] &
-        DefaultSchema['Views'])
-    ? (DefaultSchema['Tables'] &
-        DefaultSchema['Views'])[DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -1628,22 +1639,23 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    keyof DefaultSchema['Tables'] | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
-    : never) = never,
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
-    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -1652,22 +1664,23 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    keyof DefaultSchema['Tables'] | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
-    : never) = never,
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
-    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -1676,81 +1689,82 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    keyof DefaultSchema['Enums'] | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums']
-    : never) = never,
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums'][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema['Enums']
-    ? DefaultSchema['Enums'][DefaultSchemaEnumNameOrOptions]
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema['CompositeTypes']
+    | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes']
-    : never) = never,
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes'][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema['CompositeTypes']
-    ? DefaultSchema['CompositeTypes'][PublicCompositeTypeNameOrOptions]
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
 
 export const Constants = {
   public: {
     Enums: {
-      channel_type: ['cercle_intime', 'hub', 'broadcast_institutionnel'],
+      channel_type: ["cercle_intime", "hub", "broadcast_institutionnel"],
       consent_type: [
-        'inscription',
-        'cercle_intime',
-        'hub',
-        'communications_institutionnelles',
-        'photo_enfant',
+        "inscription",
+        "cercle_intime",
+        "hub",
+        "communications_institutionnelles",
+        "photo_enfant",
       ],
       household_role: [
-        'parent',
-        'beau_parent',
-        'grand_parent',
-        'autre_referent',
+        "parent",
+        "beau_parent",
+        "grand_parent",
+        "autre_referent",
       ],
-      hub_kind: ['ecole', 'club', 'quartier', 'conservatoire', 'autre'],
-      hub_status: ['solo', 'active', 'structured'],
+      hub_kind: ["ecole", "club", "quartier", "conservatoire", "autre"],
+      hub_status: ["solo", "active", "structured"],
       moove_movement: [
-        'gain',
-        'usage',
-        'ajustement',
-        'fonds_solidarite',
-        'solde_initial',
+        "gain",
+        "usage",
+        "ajustement",
+        "fonds_solidarite",
+        "solde_initial",
       ],
-      report_status: ['ouvert', 'en_cours', 'resolu', 'clos'],
-      trip_direction: ['aller', 'retour'],
+      report_status: ["ouvert", "en_cours", "resolu", "clos"],
+      trip_direction: ["aller", "retour"],
       trip_request_status: [
-        'en_attente',
-        'accepte',
-        'refuse',
-        'annule',
-        'expire',
+        "en_attente",
+        "accepte",
+        "refuse",
+        "annule",
+        "expire",
       ],
       trip_status: [
-        'couvert',
-        'couvert_ouvert',
-        'partiellement_couvert',
-        'conditionnel',
-        'non_couvert',
-        'annule',
+        "couvert",
+        "couvert_ouvert",
+        "partiellement_couvert",
+        "conditionnel",
+        "non_couvert",
+        "annule",
       ],
-      volunteer_vector: ['club', 'po_ecole', 'commune', 'association_parents'],
+      volunteer_vector: ["club", "po_ecole", "commune", "association_parents"],
     },
   },
 } as const
