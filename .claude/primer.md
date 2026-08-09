@@ -233,13 +233,26 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   sinon premier palier noté. Formulaire activité : « Distance du
   trajet depuis le domicile », défaut tranche courte.
 
+- 09/08 : solde initial (migration 0017 NON APPLIQUÉE) — trigger
+  after insert sur users → mooves_grant_initial_balance (definer,
+  révoquée, leçon 0016) : crédit unique de mooves_initial_balance (60
+  depuis 0016) à la création du profil /bienvenue, rien si null.
+  Idempotence : test d'existence + index unique partiel (user_id)
+  where movement='solde_initial'. mooves_apply_movement purgée de sa
+  branche « premier mouvement » (double crédit sinon). Rattrapage des
+  comptes existants dans la migration (Benjamin + 2 Stéphane, soldes
+  modifiés = attendu). Aucun changement UI ni types nécessaires.
+  Ben a posé 0016 : revoke mooves_amount_for_band (oubli 0015, leçon
+  dans tasks/lessons.md) + paramètres porteur (initial 60, déséquilibre
+  4 semaines).
+
 ## Next step exact
 0. Ben : SUPABASE_SERVICE_ROLE_KEY dans .env.local (dashboard →
    Project Settings → API → service_role), puis
    npm run set-dev-password -- debruijneb@gmail.com <mdp> et idem
    ben@beneloo.com. Si « provider disabled » à la connexion :
    Authentication → Sign In / Providers → activer Email password.
-1. Ben applique les migrations 0010→0015 manquantes, régénère les
+1. Ben applique les migrations manquantes jusqu'à 0017, régénère les
    types.
 2. Tester étape 8 : créer un meeting point (admin), publier avec point,
    accepter une demande premier contact (rappel visible), confirmer un
