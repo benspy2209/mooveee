@@ -153,8 +153,46 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   rechargement de l'état réel après échec du RPC (plus d'affichage
   optimiste), idem sur refus.
 
+- 06/08 : matching Macarons sans distance (e5b1336) :
+  - Écran hub : « Suggestions pour votre foyer » — croisement client
+    entre mes trajets non_couvert (lecture directe légitime, cercle
+    intime) et les trajets ouverts de hub_trips_view : même direction,
+    même jour bruxellois, fenêtre 90 min, libellé identique/similaire
+    (normalisation accents + inclusion + chevauchement de tokens).
+    Tri : identique > similaire, puis delta croissant. 3 explications
+    par suggestion (horaire, lieu, écart en minutes), pas de score.
+    Rien d'automatique : mêmes boutons demander/accepter.
+  - ⚠️ Signal Mooves §5.5 : documenté dans compareSuggestions mais
+    SANS effet pour l'instant — le niveau du demandeur est constant
+    pour un même utilisateur, il ne peut pas départager ses propres
+    suggestions. Sa vraie place = départage des demandes reçues côté
+    conducteur (nécessite exposition croisée d'un signal → arbitrage
+    Ben, signalé dans le message de livraison).
+  - /semaine : trajet publié → compte des familles du hub au besoin
+    correspondant (rpc hub_trip_matching_needs_count, un compte jamais
+    une liste, réservé au foyer conducteur).
+  - Migration 0012 (NON APPLIQUÉE) : trip_labels_similar +
+    hub_trip_matching_needs_count (security definer, revoke
+    public/anon, grant authenticated). Fenêtre 90 min alignée
+    client/SQL.
+
+- 09/08 : connexion de développement (91287ee) — SMTP Supabase plafonné
+  bloquait les tests multi-comptes. scripts/set-dev-password.ts
+  (service_role via SUPABASE_SERVICE_ROLE_KEY dans .env.local, jamais
+  VITE_, refus si absente ; npm run set-dev-password -- email mdp) +
+  bloc mot de passe sur /login gaté import.meta.env.DEV (vérifié
+  absent du bundle prod par grep). Magic link = seul mode du produit
+  réel. Comptes de test : debruijneb@gmail.com (foyer Benjamin),
+  ben@beneloo.com (Foyer de Steph). Orphelins à ne pas toucher :
+  swauquaire@gmail.com, benspy@gmail.com.
+
 ## Next step exact
-1. Ben applique les migrations 0010 et 0011, régénère les types.
+0. Ben : SUPABASE_SERVICE_ROLE_KEY dans .env.local (dashboard →
+   Project Settings → API → service_role), puis
+   npm run set-dev-password -- debruijneb@gmail.com <mdp> et idem
+   ben@beneloo.com. Si « provider disabled » à la connexion :
+   Authentication → Sign In / Providers → activer Email password.
+1. Ben applique les migrations 0010, 0011, 0012, régénère les types.
 2. Tester : accepter une demande → 2 mouvements liés au trajet, gain
    30 si distance null (noté), balance à jour, /equilibre chez les
    deux parents.

@@ -1483,10 +1483,6 @@ export type Database = {
     }
     Functions: {
       accept_trip_request: { Args: { p_request: string }; Returns: undefined }
-      hub_trip_matching_needs_count: {
-        Args: { p_trip: string }
-        Returns: number
-      }
       auth_admin_household_ids: { Args: never; Returns: string[] }
       auth_household_ids: { Args: never; Returns: string[] }
       auth_household_member_ids: { Args: never; Returns: string[] }
@@ -1517,6 +1513,10 @@ export type Database = {
         }[]
       }
       hub_trip_children_count: { Args: { p_trip: string }; Returns: number }
+      hub_trip_matching_needs_count: {
+        Args: { p_trip: string }
+        Returns: number
+      }
       hub_user_first_name: { Args: { p_user: string }; Returns: string }
       mooves_amount_for_distance: { Args: { p_km: number }; Returns: number }
       mooves_apply_movement: {
@@ -1538,6 +1538,7 @@ export type Database = {
         Args: { p_child: string; p_trip: string }
         Returns: boolean
       }
+      trip_labels_similar: { Args: { a: string; b: string }; Returns: boolean }
     }
     Enums: {
       channel_type: "cercle_intime" | "hub" | "broadcast_institutionnel"
