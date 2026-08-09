@@ -221,13 +221,25 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   /login → /foyer si connecté ; page scaffold supprimée. Bannière de
   relance passée sous le header (plus sticky).
 
+- 09/08 : tranches de distance, arbitrage porteur (migration 0015 NON
+  APPLIQUÉE) — enum distance_band courte/moyenne/longue (menu
+  déroulant, jamais saisie libre/adresse/coordonnées, distance_km
+  reste null). Barème 5 paliers CONSERVÉ, correspondance par max_km :
+  courte→30 (max_km 3), moyenne→50 (palier central max_km 10),
+  longue→70 (dernier). activities.distance_band not null default
+  courte (existantes basculées), trips.distance_band nullable,
+  backfill migration + rattrapage à chaque génération (comme les
+  enfants). accept_trip_request : tranche d'abord, sinon distance_km,
+  sinon premier palier noté. Formulaire activité : « Distance du
+  trajet depuis le domicile », défaut tranche courte.
+
 ## Next step exact
 0. Ben : SUPABASE_SERVICE_ROLE_KEY dans .env.local (dashboard →
    Project Settings → API → service_role), puis
    npm run set-dev-password -- debruijneb@gmail.com <mdp> et idem
    ben@beneloo.com. Si « provider disabled » à la connexion :
    Authentication → Sign In / Providers → activer Email password.
-1. Ben applique les migrations 0010→0014 manquantes, régénère les
+1. Ben applique les migrations 0010→0015 manquantes, régénère les
    types.
 2. Tester étape 8 : créer un meeting point (admin), publier avec point,
    accepter une demande premier contact (rappel visible), confirmer un
