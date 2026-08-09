@@ -246,19 +246,35 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   dans tasks/lessons.md) + paramètres porteur (initial 60, déséquilibre
   4 semaines).
 
+- 09/08 : mode Concierge, étape 9 (migration 0018 NON APPLIQUÉE =
+  paramètres seuls) — 4 détections EN LECTURE au chargement des
+  écrans, policies existantes, aucune fonction definer : rappel avant
+  trajet (bannière _authed, conducteur + enfant à bord via demandes
+  acceptées relues par hub_trips_view), hub solo stagnant et hub actif
+  sans trajet publié (cartes admin sur /hubs, code d'adhésion inclus),
+  déséquilibre durable (imbalanceIsDurable en marche arrière sur le
+  ledger, message strictement privé /equilibre, ton d'aide).
+  Délais : concierge_trip_reminder_hours=24,
+  concierge_hub_solo_weeks=3, concierge_hub_inactive_weeks=3
+  (PROPOSITIONS à valider porteur) ; mooves_imbalance_weeks=4 tranché.
+  Accroches cron/push dans lib/concierge.ts, rien de câblé. Tables
+  encore sans policy (institutions, institutional_messages,
+  institution_usage_metrics, impact_snapshots) = étapes 10/12.
+
 ## Next step exact
 0. Ben : SUPABASE_SERVICE_ROLE_KEY dans .env.local (dashboard →
    Project Settings → API → service_role), puis
    npm run set-dev-password -- debruijneb@gmail.com <mdp> et idem
    ben@beneloo.com. Si « provider disabled » à la connexion :
    Authentication → Sign In / Providers → activer Email password.
-1. Ben applique les migrations manquantes jusqu'à 0017, régénère les
+1. Ben applique les migrations manquantes jusqu'à 0018, régénère les
    types.
 2. Tester étape 8 : créer un meeting point (admin), publier avec point,
    accepter une demande premier contact (rappel visible), confirmer un
    dépôt côté conducteur, vérifier l'heure côté parent, bannière de
    relance après le délai.
-3. Étape 9 : mode Concierge, automatisations de base.
+3. Valider les 3 délais Concierge proposés (0018), puis étape 10 :
+   métriques institutionnelles sans facturation automatique.
 
 ## Blockers
 - Migrations : 0009 appliquée par Ben (contrainte élargie, types
