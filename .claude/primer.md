@@ -186,23 +186,46 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   ben@beneloo.com (Foyer de Steph). Orphelins à ne pas toucher :
   swauquaire@gmail.com, benspy@gmail.com.
 
+- 09/08 : étape 8 sécurité enfant (32dc3e2), migration 0014 (NON
+  APPLIQUÉE) :
+  - Les 3 tables muettes de 0001 ont leurs policies : meeting_points
+    (select membres validés, écriture admins, un défaut/hub par index
+    partiel, RPC meeting_point_set_default en SECURITY INVOKER),
+    trip_dropoff_confirmations (insert conducteur du trajet + enfant à
+    bord, select parent de l'enfant OU conducteur, delete auteur, pas
+    d'update), hub_bridges (select membres des 2 hubs, AUCUNE policy
+    d'écriture — deny assumé jusqu'à construction des ponts §9.1).
+  - trip_children_aboard (definer, revoke public/anon) : prénoms des
+    enfants à bord réservés au conducteur (driver_id = auth.uid()) —
+    élargissement assumé §12.2, seul chemin nominatif vers lui.
+  - trip_request_first_contact (definer) : fenêtre de confiance §12.3,
+    vrai si les 2 foyers n'ont aucune demande acceptée entre eux.
+  - Contrainte trips_meeting_point_in_hub, bucket privé
+    meeting-point-photos ({hub_id}/{mp_id}.{ext}, lecture membres,
+    écriture admins), app_settings dropoff_reminder_minutes = 20.
+  - UI : section points de rendez-vous dans le hub (CRUD admin, photo,
+    défaut), choix du point à la publication + affichage cartes hub ;
+    bulletin de dépôt par enfant dans le détail trajet (conducteur) ;
+    /demandes : statut de dépôt côté parent (heure ou « en attente »),
+    rappel premier contact sur les demandes reçues en attente ;
+    bannière de relance conducteur dans _authed (délai app_settings,
+    lookback 24 h), accroche push documentée dans
+    lib/dropoff-reminders.ts. Types database.ts étendus À LA MAIN pour
+    les 3 RPC (la régénération les écrasera proprement).
+
 ## Next step exact
 0. Ben : SUPABASE_SERVICE_ROLE_KEY dans .env.local (dashboard →
    Project Settings → API → service_role), puis
    npm run set-dev-password -- debruijneb@gmail.com <mdp> et idem
    ben@beneloo.com. Si « provider disabled » à la connexion :
    Authentication → Sign In / Providers → activer Email password.
-1. Ben applique les migrations 0010, 0011, 0012, régénère les types.
-2. Tester : accepter une demande → 2 mouvements liés au trajet, gain
-   30 si distance null (noté), balance à jour, /equilibre chez les
-   deux parents.
-3. Étape 8 : sécurité enfant (bulletin de trajet, meeting points,
-   fenêtre de confiance).
-2. Étape 6 : lien filtré cercle intime vers hub (déjà en place via
-   hub_trips_view) puis étape 7 : système Mooves (sans paiement).
-2. Tester : activités → Générer les trajets → attribuer conducteur,
-   annuler/rétablir, naviguer les semaines.
-3. Étape 5 : statuts de hub et transition solo → active.
+1. Ben applique les migrations 0010→0014 manquantes, régénère les
+   types.
+2. Tester étape 8 : créer un meeting point (admin), publier avec point,
+   accepter une demande premier contact (rappel visible), confirmer un
+   dépôt côté conducteur, vérifier l'heure côté parent, bannière de
+   relance après le délai.
+3. Étape 9 : mode Concierge, automatisations de base.
 
 ## Blockers
 - Migrations : 0009 appliquée par Ben (contrainte élargie, types
