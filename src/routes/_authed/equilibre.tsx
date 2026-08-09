@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
+import { imbalanceIsDurable } from '@/lib/concierge'
 
 import type { Database } from '@/types/database'
 
@@ -50,6 +51,7 @@ function EquilibrePage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [balance, setBalance] = useState(0)
   const [entries, setEntries] = useState<Array<LedgerEntry>>([])
+  const [imbalanceWeeks, setImbalanceWeeks] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     if (!userId) return
@@ -67,9 +69,9 @@ function EquilibrePage() {
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(200),
-      // mooves_imbalance_weeks : paramètre à null tant que le porteur
-      // n'a pas arbitré. Lu ici pour être prêt, sans effet tant que
-      // null (le déclenchement Concierge viendra plus tard).
+      // mooves_imbalance_weeks : tranché à 4 par le porteur (0016).
+      // Alimente la détection Concierge de déséquilibre durable
+      // ci-dessous ; null = détection désactivée.
       supabase
         .from('app_settings')
         .select('value')
@@ -87,6 +89,10 @@ function EquilibrePage() {
 
     setBalance(balanceResult.data?.balance ?? 0)
     setEntries(ledgerResult.data)
+    const weeks = imbalanceResult.data
+      ? Number(imbalanceResult.data.value)
+      : null
+    setImbalanceWeeks(Number.isFinite(weeks) ? weeks : null)
     setLoading(false)
   }, [userId])
 
@@ -123,6 +129,17 @@ function EquilibrePage() {
       </main>
     )
   }
+
+  // Concierge (étape 9) : déséquilibre durable — indicateur négatif
+  // sans interruption depuis mooves_imbalance_weeks semaines. Message
+  // STRICTEMENT PRIVÉ (cet écran ne montre que les données self, RLS),
+  // formulé comme une proposition d'aide, jamais un reproche.
+  const durableImbalance = imbalanceIsDurable(
+    balance,
+    entries,
+    imbalanceWeeks ?? undefined,
+    new Date(),
+  )
 
   const helpGiven = entries
     .filter((e) => e.movement === 'gain')
@@ -178,6 +195,20 @@ function EquilibrePage() {
             {balance < 0 &&
               'Vous recevez en ce moment plus d’aide que vous n’en apportez. C’est exactement à ça que sert l’entraide : rien n’est bloqué, demandez des places comme d’habitude.'}
           </p>
+
+          {durableImbalance && (
+            <div className="mt-4 rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+              <p className="font-medium">Un coup de main pour la suite ?</p>
+              <p className="mt-1">
+                Votre foyer reçoit plus d’aide qu’il n’en apporte depuis
+                quelques semaines — et c’est très bien, l’entraide est là pour
+                ça. Si vous souhaitez proposer des places à votre tour et que
+                l’organisation coince (horaires, voiture, trajets qui ne collent
+                pas), le Concierge Mooveee peut chercher avec vous des créneaux
+                qui vous arrangent. Personne d’autre ne voit ce message.
+              </p>
+            </div>
+          )}
 
           <h2 className="mt-8 text-sm font-medium text-gray-700">
             Historique de participation

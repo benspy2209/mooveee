@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
+import { fetchConciergeSettings, hubSoloIsStagnant } from '@/lib/concierge'
 
+import type { ConciergeSettings } from '@/lib/concierge'
 import type { FormEvent } from 'react'
 import type { Database } from '@/types/database'
 
@@ -576,6 +578,10 @@ function HubDetail({
   >([])
   const [meetingPoints, setMeetingPoints] = useState<Array<MeetingPoint>>([])
   const [mpPhotoUrls, setMpPhotoUrls] = useState<Record<string, string>>({})
+  const [conciergeSettings, setConciergeSettings] = useState<ConciergeSettings>(
+    {},
+  )
+  const [lastPublishedAt, setLastPublishedAt] = useState<string | null>(null)
   const [activationBanner, setActivationBanner] = useState(false)
   const previousStatus = useRef<HubStatus | null>(null)
 
@@ -591,6 +597,8 @@ function HubDetail({
       myMembersResult,
       myChildrenResult,
       meetingPointsResult,
+      settingsResult,
+      lastPublishedResult,
     ] = await Promise.all([
       supabase
         .from('hubs')
@@ -637,6 +645,16 @@ function HubDetail({
         .select('id, label, description, photo_url, is_default')
         .eq('hub_id', hubId)
         .order('created_at'),
+      fetchConciergeSettings(),
+      // Concierge : dernier trajet publié du hub (passé ou à venir),
+      // toujours via hub_trips_view (interdit n°9).
+      supabase
+        .from('hub_trips_view')
+        .select('scheduled_at')
+        .eq('hub_id', hubId)
+        .order('scheduled_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
     ])
 
     const firstError =
@@ -694,6 +712,8 @@ function HubDetail({
     setHub(hubResult.data)
     setMeetingPoints(meetingPointsResult.data)
     setMpPhotoUrls(mpUrls)
+    setConciergeSettings(settingsResult)
+    setLastPublishedAt(lastPublishedResult.data?.scheduled_at ?? null)
     setMembers(membersResult.data)
     setThreshold(
       thresholdResult.data ? Number(thresholdResult.data.value) : null,
@@ -731,6 +751,26 @@ function HubDetail({
   const pendingMembers = members.filter((m) => !m.validated_at)
   const missing =
     threshold !== null ? Math.max(0, threshold - validatedMembers.length) : null
+
+  // Concierge (étape 9) : détections en lecture, suggestions aux
+  // admins. Rien d'automatique au-delà de l'affichage — le Concierge
+  // n'invite personne, ne publie rien, n'exclut personne.
+  const soloStagnant =
+    isAdmin &&
+    hubSoloIsStagnant(
+      hub.status,
+      validatedMembers.flatMap((m) => (m.validated_at ? [m.validated_at] : [])),
+      conciergeSettings.concierge_hub_solo_weeks,
+      new Date(),
+    )
+  const inactiveWeeks = conciergeSettings.concierge_hub_inactive_weeks
+  const hubInactive =
+    isAdmin &&
+    hub.status !== 'solo' &&
+    inactiveWeeks !== undefined &&
+    (!lastPublishedAt ||
+      new Date(lastPublishedAt).getTime() <
+        Date.now() - inactiveWeeks * 7 * 24 * 3_600_000)
 
   const mpLabelById = new Map(meetingPoints.map((mp) => [mp.id, mp.label]))
 
@@ -813,6 +853,35 @@ function HubDetail({
             <span className="font-mono text-base font-semibold tracking-widest">
               {hub.join_code}
             </span>
+          </p>
+        </div>
+      )}
+
+      {soloStagnant && (
+        <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-medium">
+            Votre hub est en démarrage depuis un moment sans nouvelle famille.
+          </p>
+          <p className="mt-1">
+            Quelques invitations suffisent souvent à le faire décoller :
+            partagez le code{' '}
+            <span className="font-mono font-semibold tracking-widest">
+              {hub.join_code}
+            </span>{' '}
+            aux familles de l’école, du club ou du quartier.
+          </p>
+        </div>
+      )}
+
+      {hubInactive && (
+        <div className="mt-4 rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+          <p className="font-medium">
+            Aucun trajet n’a été proposé dans ce hub depuis plusieurs semaines.
+          </p>
+          <p className="mt-1">
+            Proposer des places sur un prochain trajet relance la dynamique :
+            les autres familles voient que le hub vit et osent proposer à leur
+            tour.
           </p>
         </div>
       )}

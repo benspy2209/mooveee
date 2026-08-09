@@ -7,9 +7,12 @@ import {
   useLocation,
 } from '@tanstack/react-router'
 import { useAuth } from '@/lib/auth'
+import { supabase } from '@/lib/supabase'
 import { fetchPendingDropoffReminders } from '@/lib/dropoff-reminders'
+import { fetchUpcomingTripReminders } from '@/lib/concierge'
 
 import type { DropoffReminder } from '@/lib/dropoff-reminders'
+import type { TripReminder } from '@/lib/concierge'
 
 export const Route = createFileRoute('/_authed')({
   component: AuthedLayout,
@@ -49,6 +52,7 @@ function AuthedLayout() {
     <>
       <AppHeader pathname={pathname} />
       <DropoffReminderBanner userId={session.user.id} />
+      <TripReminderBanner userId={session.user.id} />
       <Outlet />
     </>
   )
@@ -215,6 +219,76 @@ function DropoffReminderBanner({ userId }: { userId: string }) {
           type="button"
           onClick={() => setDismissed(true)}
           className="shrink-0 text-sm text-amber-700 hover:text-amber-900"
+        >
+          Masquer
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Concierge (étape 9) : rappel avant un trajet à venir, pour le
+// conducteur comme pour les familles dont un enfant est à bord.
+// Détection au chargement, fenêtre app_settings
+// (concierge_trip_reminder_hours). Accroche push : lib/concierge.ts.
+function TripReminderBanner({ userId }: { userId: string }) {
+  const [reminders, setReminders] = useState<Array<TripReminder>>([])
+  const [dismissed, setDismissed] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    void supabase
+      .from('household_members')
+      .select('household_id')
+      .eq('user_id', userId)
+      .limit(1)
+      .maybeSingle()
+      .then(async ({ data: membership }) => {
+        if (!membership) return
+        const result = await fetchUpcomingTripReminders(
+          userId,
+          membership.household_id,
+        )
+        if (!cancelled) setReminders(result)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [userId])
+
+  if (dismissed || reminders.length === 0) return null
+
+  return (
+    <div className="border-b border-blue-200 bg-blue-50 px-4 py-3">
+      <div className="mx-auto flex w-full max-w-lg items-start justify-between gap-3">
+        <div className="text-sm text-blue-900">
+          <p className="font-medium">
+            Trajet{reminders.length > 1 ? 's' : ''} à venir prochainement.
+          </p>
+          <ul className="mt-1 space-y-0.5">
+            {reminders.map((r) => (
+              <li key={`${r.tripId}-${r.role}`}>
+                {new Date(r.scheduledAt).toLocaleString('fr-BE', {
+                  timeZone: 'Europe/Brussels',
+                  weekday: 'long',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}{' '}
+                ({r.originLabel} → {r.destinationLabel}) —{' '}
+                {r.role === 'conducteur'
+                  ? 'vous conduisez'
+                  : r.childFirstName
+                    ? `${r.childFirstName} est à bord`
+                    : 'votre enfant est à bord'}
+                .
+              </li>
+            ))}
+          </ul>
+        </div>
+        <button
+          type="button"
+          onClick={() => setDismissed(true)}
+          className="shrink-0 text-sm text-blue-700 hover:text-blue-900"
         >
           Masquer
         </button>
