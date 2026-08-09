@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 
 import type { FormEvent } from 'react'
+import type { Database } from '@/types/database'
 
 interface ChildOption {
   id: string
@@ -15,10 +16,23 @@ interface Activity {
   child_id: string
   label: string
   location_label: string | null
+  distance_band: DistanceBand
   rrule: string | null
   starts_at: string | null
   ends_at: string | null
 }
+
+// Tranches de distance (arbitrage porteur, migration 0015) : un menu
+// déroulant, jamais de saisie libre, jamais d'adresse ni de
+// coordonnées. La tranche se propage aux trajets générés et indexe le
+// gain Mooves à l'acceptation.
+type DistanceBand = Database['public']['Enums']['distance_band']
+
+const DISTANCE_BANDS: Array<{ value: DistanceBand; label: string }> = [
+  { value: 'courte', label: 'Moins de 3 km' },
+  { value: 'moyenne', label: 'De 3 à 15 km' },
+  { value: 'longue', label: 'Plus de 15 km' },
+]
 
 // Jours au format BYDAY d'iCal RRULE, ordre lundi → dimanche.
 const WEEKDAYS: Array<{ code: string; label: string; jsDay: number }> = [
@@ -152,7 +166,7 @@ function ActivitesPage() {
       supabase
         .from('activities')
         .select(
-          'id, child_id, label, location_label, rrule, starts_at, ends_at',
+          'id, child_id, label, location_label, distance_band, rrule, starts_at, ends_at',
         )
         .eq('household_id', membership.household_id)
         .order('created_at'),
@@ -478,6 +492,9 @@ function ActivityForm({
   )
   const [label, setLabel] = useState(activity?.label ?? '')
   const [location, setLocation] = useState(activity?.location_label ?? '')
+  const [distanceBand, setDistanceBand] = useState<DistanceBand>(
+    activity?.distance_band ?? 'courte',
+  )
   const [weekly, setWeekly] = useState(Boolean(activity?.rrule))
   const [days, setDays] = useState<Array<string>>(
     activity?.rrule ? parseRruleDays(activity.rrule) : [],
@@ -521,6 +538,7 @@ function ActivityForm({
       child_id: childId,
       label: label.trim(),
       location_label: location.trim() === '' ? null : location.trim(),
+      distance_band: distanceBand,
       rrule: weekly ? buildRrule(days) : null,
       starts_at: combine(anchorDate, startTime).toISOString(),
       ends_at: combine(anchorDate, endTime).toISOString(),
@@ -605,6 +623,31 @@ function ActivityForm({
           onChange={(e) => setLocation(e.target.value)}
           className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
+      </div>
+
+      <div>
+        <label
+          htmlFor={`${idPrefix}-distance`}
+          className="block text-sm font-medium text-gray-700"
+        >
+          Distance du trajet depuis le domicile
+        </label>
+        <select
+          id={`${idPrefix}-distance`}
+          value={distanceBand}
+          onChange={(e) => setDistanceBand(e.target.value as DistanceBand)}
+          className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        >
+          {DISTANCE_BANDS.map((band) => (
+            <option key={band.value} value={band.value}>
+              {band.label}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-xs text-gray-500">
+          Une simple tranche, sans adresse : elle sert à reconnaître l’aide
+          apportée sur les trajets partagés.
+        </p>
       </div>
 
       <fieldset>

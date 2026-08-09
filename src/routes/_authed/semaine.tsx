@@ -7,6 +7,7 @@ import type { Database } from '@/types/database'
 
 type TripStatus = Database['public']['Enums']['trip_status']
 type TripDirection = Database['public']['Enums']['trip_direction']
+type DistanceBand = Database['public']['Enums']['distance_band']
 
 interface ChildOption {
   id: string
@@ -23,6 +24,7 @@ interface ActivityRecord {
   child_id: string
   label: string
   location_label: string | null
+  distance_band: DistanceBand
   rrule: string | null
   starts_at: string | null
   ends_at: string | null
@@ -463,7 +465,7 @@ function WeekScreen({
       supabase
         .from('activities')
         .select(
-          'id, child_id, label, location_label, rrule, starts_at, ends_at',
+          'id, child_id, label, location_label, distance_band, rrule, starts_at, ends_at',
         )
         .eq('household_id', householdId),
       supabase
@@ -496,6 +498,7 @@ function WeekScreen({
       scheduled_at: string
       origin_label: string
       destination_label: string
+      distance_band: DistanceBand
     }
 
     const newTrips: Array<NewTrip> = []
@@ -537,6 +540,7 @@ function WeekScreen({
           scheduled_at: iso,
           origin_label: occ.origin,
           destination_label: occ.destination,
+          distance_band: activity.distance_band,
         })
       }
     }
@@ -657,6 +661,33 @@ function WeekScreen({
 
       if (linkError) {
         setGenerationError(linkError.message)
+        setGenerating(false)
+        setGenerationProgress(null)
+        return
+      }
+    }
+
+    // Propagation de la tranche de distance — rattrapage intégré, comme
+    // pour les enfants (0015) : chaque génération réaligne la tranche de
+    // TOUS les trajets générés du foyer sur celle de leur activité
+    // (trajets d'avant la migration, tranche modifiée par le parent).
+    // ON CONFLICT DO NOTHING ne met pas à jour les trajets existants :
+    // ce passage s'en charge. Conducteurs et annulations non touchés.
+    const bandGroups = new Map<DistanceBand, Array<string>>()
+    for (const a of activitiesResult.data) {
+      const group = bandGroups.get(a.distance_band) ?? []
+      group.push(a.id)
+      bandGroups.set(a.distance_band, group)
+    }
+    for (const [band, activityIds] of bandGroups) {
+      const { error: bandError } = await supabase
+        .from('trips')
+        .update({ distance_band: band })
+        .eq('household_id', householdId)
+        .in('activity_id', activityIds)
+
+      if (bandError) {
+        setGenerationError(bandError.message)
         setGenerating(false)
         setGenerationProgress(null)
         return
