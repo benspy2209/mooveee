@@ -261,6 +261,17 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   encore sans policy (institutions, institutional_messages,
   institution_usage_metrics, impact_snapshots) = étapes 10/12.
 
+- 11/08 : fix parcours activité→trajet (retour porteur prod) — la
+  génération n'avait lieu qu'au clic « Générer les trajets » :
+  extraite dans lib/trips.ts (unique implémentation DST) et déclenchée
+  AUTO à l'enregistrement d'une activité (3 mois, idempotente, échec
+  signalé sans perdre l'activité, notice verte/ambre sur /activites).
+  /semaine : indice « vos prochains trajets commencent le X » + saut
+  vers la bonne semaine quand la semaine visible est vide, état vide
+  explicite sinon. Modale détail vérifiée au code (z-50 > header
+  z-40), pas de régression trouvée. Le bouton Générer reste (horizons
+  plus longs + rattrapage).
+
 ## Next step exact
 0. Ben : SUPABASE_SERVICE_ROLE_KEY dans .env.local (dashboard →
    Project Settings → API → service_role), puis
