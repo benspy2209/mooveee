@@ -2,12 +2,23 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
+import {
+  BRUSSELS_TZ,
+  DEFAULT_HORIZON_DAYS,
+  HORIZONS,
+  addDays,
+  fromBrusselsWallClock,
+  generateTripsForHousehold,
+  sameCalendarDay,
+  toBrusselsWallClock,
+  weekdayOf,
+} from '@/lib/trips'
 
+import type { WallClock } from '@/lib/trips'
 import type { Database } from '@/types/database'
 
 type TripStatus = Database['public']['Enums']['trip_status']
 type TripDirection = Database['public']['Enums']['trip_direction']
-type DistanceBand = Database['public']['Enums']['distance_band']
 
 interface ChildOption {
   id: string
@@ -17,17 +28,6 @@ interface ChildOption {
 interface Member {
   user_id: string
   users: { first_name: string; last_name: string | null } | null
-}
-
-interface ActivityRecord {
-  id: string
-  child_id: string
-  label: string
-  location_label: string | null
-  distance_band: DistanceBand
-  rrule: string | null
-  starts_at: string | null
-  ends_at: string | null
 }
 
 interface Trip {
@@ -51,117 +51,6 @@ interface Trip {
 interface HubOption {
   id: string
   name: string
-}
-
-const HOME_LABEL = 'Domicile'
-
-const HORIZONS = [
-  { days: 28, label: '4 semaines' },
-  { days: 91, label: '3 mois' },
-  { days: 182, label: '6 mois' },
-  { days: 365, label: '1 an' },
-]
-const DEFAULT_HORIZON_DAYS = 91 // 3 mois
-
-// Taille des lots d'insertion : sur un an, une activité récurrente
-// représente une centaine de trajets — jamais une requête par trajet.
-const INSERT_BATCH_SIZE = 200
-
-// ---------------------------------------------------------------------
-// Fuseau : les heures sont stockées en UTC mais saisies en heure locale
-// belge. Toute l'arithmétique d'occurrences se fait en calendrier
-// Europe/Brussels, jamais par addition de sept jours sur un timestamp
-// UTC : un tennis à 16h reste à 16h après le changement d'heure.
-// ---------------------------------------------------------------------
-
-const BRUSSELS_TZ = 'Europe/Brussels'
-
-interface WallClock {
-  y: number
-  m: number // 1-12
-  d: number
-  hh: number
-  mm: number
-}
-
-const brusselsParts = new Intl.DateTimeFormat('en-CA', {
-  timeZone: BRUSSELS_TZ,
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  hour12: false,
-})
-
-function toBrusselsWallClock(date: Date): WallClock {
-  const parts: Record<string, number> = {}
-  for (const part of brusselsParts.formatToParts(date)) {
-    if (part.type !== 'literal') parts[part.type] = Number(part.value)
-  }
-  return {
-    y: parts.year,
-    m: parts.month,
-    d: parts.day,
-    hh: parts.hour === 24 ? 0 : parts.hour,
-    mm: parts.minute,
-  }
-}
-
-// Timestamp UTC dont l'affichage en Europe/Brussels correspond au
-// mur d'horloge demandé. Ajustement itératif (gère les deux
-// changements d'heure sans librairie).
-function fromBrusselsWallClock(w: WallClock): Date {
-  let ts = Date.UTC(w.y, w.m - 1, w.d, w.hh, w.mm)
-  for (let i = 0; i < 2; i++) {
-    const shown = toBrusselsWallClock(new Date(ts))
-    ts +=
-      Date.UTC(w.y, w.m - 1, w.d, w.hh, w.mm) -
-      Date.UTC(shown.y, shown.m - 1, shown.d, shown.hh, shown.mm)
-  }
-  return new Date(ts)
-}
-
-// Arithmétique de dates pures (année/mois/jour), sans heure : sûre
-// vis-à-vis des changements d'heure.
-function addDays(w: WallClock, days: number): WallClock {
-  const d = new Date(Date.UTC(w.y, w.m - 1, w.d + days))
-  return {
-    y: d.getUTCFullYear(),
-    m: d.getUTCMonth() + 1,
-    d: d.getUTCDate(),
-    hh: w.hh,
-    mm: w.mm,
-  }
-}
-
-// Jour de semaine calendaire (0 = dimanche … 6 = samedi).
-function weekdayOf(w: WallClock): number {
-  return new Date(Date.UTC(w.y, w.m - 1, w.d)).getUTCDay()
-}
-
-function sameCalendarDay(a: WallClock, b: WallClock): boolean {
-  return a.y === b.y && a.m === b.m && a.d === b.d
-}
-
-const RRULE_JS_DAYS: Record<string, number> = {
-  SU: 0,
-  MO: 1,
-  TU: 2,
-  WE: 3,
-  TH: 4,
-  FR: 5,
-  SA: 6,
-}
-
-function parseRruleDays(rrule: string): Array<number> {
-  const byday = rrule.split(';').find((part) => part.startsWith('BYDAY='))
-  if (!byday) return []
-  return byday
-    .slice('BYDAY='.length)
-    .split(',')
-    .map((code) => RRULE_JS_DAYS[code])
-    .filter((d) => d !== undefined)
 }
 
 // ---------------------------------------------------------------------
@@ -214,6 +103,9 @@ function SemainePage() {
   const [members, setMembers] = useState<Array<Member>>([])
   const [myHubs, setMyHubs] = useState<Array<HubOption>>([])
   const [trips, setTrips] = useState<Array<Trip>>([])
+  // Prochain trajet du foyer, toutes semaines confondues : sert à
+  // guider vers la bonne semaine quand la semaine visible est vide.
+  const [nextTripAt, setNextTripAt] = useState<string | null>(null)
   const [weekOffset, setWeekOffset] = useState(0)
 
   // Lundi (calendrier bruxellois) de la semaine affichée.
@@ -251,33 +143,47 @@ function SemainePage() {
     const from = fromBrusselsWallClock(weekStart).toISOString()
     const to = fromBrusselsWallClock(weekEnd).toISOString()
 
-    const [childrenResult, membersResult, hubsResult, tripsResult] =
-      await Promise.all([
-        supabase
-          .from('children')
-          .select('id, first_name')
-          .eq('household_id', membership.household_id)
-          .order('created_at'),
-        supabase
-          .from('household_members')
-          .select('user_id, users(first_name, last_name)')
-          .eq('household_id', membership.household_id)
-          .order('joined_at'),
-        supabase
-          .from('hub_members')
-          .select('hub_id, hubs(id, name)')
-          .eq('user_id', userId)
-          .not('validated_at', 'is', null),
-        supabase
-          .from('trips')
-          .select(
-            'id, activity_id, direction, status, driver_id, scheduled_at, origin_label, destination_label, hub_id, published_to_hub, seats_total, seats_available, meeting_point_id, activities(label), trip_children(child_id)',
-          )
-          .eq('household_id', membership.household_id)
-          .gte('scheduled_at', from)
-          .lt('scheduled_at', to)
-          .order('scheduled_at'),
-      ])
+    const [
+      childrenResult,
+      membersResult,
+      hubsResult,
+      tripsResult,
+      nextTripResult,
+    ] = await Promise.all([
+      supabase
+        .from('children')
+        .select('id, first_name')
+        .eq('household_id', membership.household_id)
+        .order('created_at'),
+      supabase
+        .from('household_members')
+        .select('user_id, users(first_name, last_name)')
+        .eq('household_id', membership.household_id)
+        .order('joined_at'),
+      supabase
+        .from('hub_members')
+        .select('hub_id, hubs(id, name)')
+        .eq('user_id', userId)
+        .not('validated_at', 'is', null),
+      supabase
+        .from('trips')
+        .select(
+          'id, activity_id, direction, status, driver_id, scheduled_at, origin_label, destination_label, hub_id, published_to_hub, seats_total, seats_available, meeting_point_id, activities(label), trip_children(child_id)',
+        )
+        .eq('household_id', membership.household_id)
+        .gte('scheduled_at', from)
+        .lt('scheduled_at', to)
+        .order('scheduled_at'),
+      supabase
+        .from('trips')
+        .select('scheduled_at')
+        .eq('household_id', membership.household_id)
+        .neq('status', 'annule')
+        .gte('scheduled_at', new Date().toISOString())
+        .order('scheduled_at')
+        .limit(1)
+        .maybeSingle(),
+    ])
 
     const firstError =
       childrenResult.error ??
@@ -301,6 +207,7 @@ function SemainePage() {
     setMembers(membersResult.data)
     setMyHubs(hubsResult.data.flatMap((m) => (m.hubs ? [m.hubs] : [])))
     setTrips(tripsResult.data)
+    setNextTripAt(nextTripResult.data?.scheduled_at ?? null)
     setLoading(false)
     // weekStart dérive de weekOffset : la dépendance utile est weekOffset.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -359,6 +266,23 @@ function SemainePage() {
     )
   }
 
+  // Saute à la semaine (calendrier bruxellois) où tombe la date visée.
+  function goToWeekOf(iso: string) {
+    const target = toBrusselsWallClock(new Date(iso))
+    const targetMonday = addDays(
+      { ...target, hh: 0, mm: 0 },
+      -((weekdayOf(target) + 6) % 7),
+    )
+    const currentMonday = addDays({ ...today, hh: 0, mm: 0 }, -mondayOffset)
+    const diffDays = Math.round(
+      (Date.UTC(targetMonday.y, targetMonday.m - 1, targetMonday.d) -
+        Date.UTC(currentMonday.y, currentMonday.m - 1, currentMonday.d)) /
+        86_400_000,
+    )
+    setLoading(true)
+    setWeekOffset(Math.round(diffDays / 7))
+  }
+
   return (
     <WeekScreen
       userId={userId}
@@ -367,6 +291,10 @@ function SemainePage() {
       members={members}
       myHubs={myHubs}
       trips={trips}
+      nextTripAt={nextTripAt}
+      onGoToNextTrip={() => {
+        if (nextTripAt) goToWeekOf(nextTripAt)
+      }}
       weekStart={weekStart}
       onPreviousWeek={() => {
         setLoading(true)
@@ -393,6 +321,8 @@ function WeekScreen({
   members,
   myHubs,
   trips,
+  nextTripAt,
+  onGoToNextTrip,
   weekStart,
   onPreviousWeek,
   onNextWeek,
@@ -405,6 +335,8 @@ function WeekScreen({
   members: Array<Member>
   myHubs: Array<HubOption>
   trips: Array<Trip>
+  nextTripAt: string | null
+  onGoToNextTrip: () => void
   weekStart: WallClock
   onPreviousWeek: () => void
   onNextWeek: () => void
@@ -455,256 +387,31 @@ function WeekScreen({
     setGenerationProgress(null)
     setGenerating(true)
 
-    const now = new Date()
-    const todayBxl = toBrusselsWallClock(now)
-    const horizon = fromBrusselsWallClock(
-      addDays({ ...todayBxl, hh: 0, mm: 0 }, horizonDays),
-    )
-
-    const [activitiesResult, existingResult] = await Promise.all([
-      supabase
-        .from('activities')
-        .select(
-          'id, child_id, label, location_label, distance_band, rrule, starts_at, ends_at',
-        )
-        .eq('household_id', householdId),
-      supabase
-        .from('trips')
-        .select('activity_id, direction, scheduled_at')
-        .eq('household_id', householdId)
-        .not('activity_id', 'is', null)
-        .gte('scheduled_at', now.toISOString())
-        .lt('scheduled_at', horizon.toISOString()),
-    ])
-
-    const loadError = activitiesResult.error ?? existingResult.error
-    if (loadError || !activitiesResult.data || !existingResult.data) {
-      setGenerationError(loadError?.message ?? 'Réponse inattendue du serveur')
+    try {
+      const { insertedCount } = await generateTripsForHousehold(
+        householdId,
+        horizonDays,
+        (done, total) => setGenerationProgress({ done, total }),
+      )
+      const horizonLabel =
+        HORIZONS.find((h) => h.days === horizonDays)?.label ??
+        `${horizonDays} jours`
+      setGenerationMessage(
+        insertedCount === 0
+          ? 'Tout est à jour : aucun nouveau trajet à créer. Enfants rattachés vérifiés sur les trajets existants.'
+          : `${insertedCount} trajet${insertedCount > 1 ? 's' : ''} créé${insertedCount > 1 ? 's' : ''} sur ${horizonLabel}, enfants rattachés.`,
+      )
+      onChanged()
+    } catch (error) {
+      setGenerationError(
+        error instanceof Error
+          ? error.message
+          : 'Réponse inattendue du serveur',
+      )
+    } finally {
       setGenerating(false)
-      return
+      setGenerationProgress(null)
     }
-
-    const existingKeys = new Set(
-      existingResult.data.map(
-        (t) =>
-          `${t.activity_id}|${t.direction}|${new Date(t.scheduled_at).toISOString()}`,
-      ),
-    )
-
-    interface NewTrip {
-      household_id: string
-      activity_id: string
-      direction: TripDirection
-      scheduled_at: string
-      origin_label: string
-      destination_label: string
-      distance_band: DistanceBand
-    }
-
-    const newTrips: Array<NewTrip> = []
-
-    function pushOccurrence(
-      activity: ActivityRecord,
-      startsAt: Date,
-      endsAt: Date,
-    ) {
-      const place = activity.location_label ?? activity.label
-      const occurrences: Array<{
-        direction: TripDirection
-        at: Date
-        origin: string
-        destination: string
-      }> = [
-        {
-          direction: 'aller',
-          at: startsAt,
-          origin: HOME_LABEL,
-          destination: place,
-        },
-        {
-          direction: 'retour',
-          at: endsAt,
-          origin: place,
-          destination: HOME_LABEL,
-        },
-      ]
-      for (const occ of occurrences) {
-        const iso = occ.at.toISOString()
-        const key = `${activity.id}|${occ.direction}|${iso}`
-        if (existingKeys.has(key)) continue
-        existingKeys.add(key)
-        newTrips.push({
-          household_id: householdId,
-          activity_id: activity.id,
-          direction: occ.direction,
-          scheduled_at: iso,
-          origin_label: occ.origin,
-          destination_label: occ.destination,
-          distance_band: activity.distance_band,
-        })
-      }
-    }
-
-    for (const activity of activitiesResult.data) {
-      if (!activity.starts_at) continue
-      const endIso = activity.ends_at ?? activity.starts_at
-
-      if (!activity.rrule) {
-        const startsAt = new Date(activity.starts_at)
-        if (startsAt > now && startsAt < horizon) {
-          pushOccurrence(activity, startsAt, new Date(endIso))
-        }
-        continue
-      }
-
-      // Hebdomadaire : heures murales bruxelloises de l'activité,
-      // réappliquées à chaque date calendaire du créneau. Jamais de
-      // « + 7 jours » sur un timestamp UTC.
-      const days = parseRruleDays(activity.rrule)
-      if (days.length === 0) continue
-      const startWall = toBrusselsWallClock(new Date(activity.starts_at))
-      const endWall = toBrusselsWallClock(new Date(endIso))
-
-      for (let i = 0; i < horizonDays; i++) {
-        const day = addDays({ ...todayBxl, hh: 0, mm: 0 }, i)
-        if (!days.includes(weekdayOf(day))) continue
-        const startsAt = fromBrusselsWallClock({
-          ...day,
-          hh: startWall.hh,
-          mm: startWall.mm,
-        })
-        if (startsAt <= now || startsAt >= horizon) continue
-        const endsAt = fromBrusselsWallClock({
-          ...day,
-          hh: endWall.hh,
-          mm: endWall.mm,
-        })
-        pushOccurrence(activity, startsAt, endsAt)
-      }
-    }
-
-    // Insertion par lots. upsert + ignoreDuplicates = ON CONFLICT DO
-    // NOTHING sur l'index unique : seuls les trajets réellement créés
-    // sont renvoyés, les existants ne sont pas touchés.
-    let insertedCount = 0
-    if (newTrips.length > 0) {
-      setGenerationProgress({ done: 0, total: newTrips.length })
-      for (let i = 0; i < newTrips.length; i += INSERT_BATCH_SIZE) {
-        const batch = newTrips.slice(i, i + INSERT_BATCH_SIZE)
-        const { data: batchInserted, error: insertError } = await supabase
-          .from('trips')
-          .upsert(batch, {
-            onConflict: 'activity_id,direction,scheduled_at',
-            ignoreDuplicates: true,
-          })
-          .select('id')
-
-        if (insertError || !batchInserted) {
-          setGenerationError(
-            insertError?.message ?? 'Réponse inattendue du serveur',
-          )
-          setGenerating(false)
-          setGenerationProgress(null)
-          return
-        }
-
-        insertedCount += batchInserted.length
-        setGenerationProgress({
-          done: Math.min(i + INSERT_BATCH_SIZE, newTrips.length),
-          total: newTrips.length,
-        })
-      }
-    }
-
-    // Rattachement des enfants — rattrapage intégré : chaque génération
-    // (re)pose le lien enfant/activité sur TOUS les trajets générés du
-    // foyer, nouveaux comme anciens. Idempotent via la clé primaire
-    // (trip_id, child_id) : ON CONFLICT DO NOTHING, jamais de doublon.
-    const childByActivity = new Map(
-      activitiesResult.data.map((a) => [a.id, a.child_id]),
-    )
-    const links: Array<{ trip_id: string; child_id: string }> = []
-    const PAGE_SIZE = 1000
-    for (let from = 0; ; from += PAGE_SIZE) {
-      const { data: page, error: pageError } = await supabase
-        .from('trips')
-        .select('id, activity_id')
-        .eq('household_id', householdId)
-        .not('activity_id', 'is', null)
-        .order('id')
-        .range(from, from + PAGE_SIZE - 1)
-
-      if (pageError || !page) {
-        setGenerationError(
-          pageError?.message ?? 'Réponse inattendue du serveur',
-        )
-        setGenerating(false)
-        setGenerationProgress(null)
-        return
-      }
-      for (const t of page) {
-        const childId = t.activity_id
-          ? childByActivity.get(t.activity_id)
-          : undefined
-        if (childId) links.push({ trip_id: t.id, child_id: childId })
-      }
-      if (page.length < PAGE_SIZE) break
-    }
-
-    for (let i = 0; i < links.length; i += INSERT_BATCH_SIZE) {
-      const { error: linkError } = await supabase
-        .from('trip_children')
-        .upsert(links.slice(i, i + INSERT_BATCH_SIZE), {
-          onConflict: 'trip_id,child_id',
-          ignoreDuplicates: true,
-        })
-
-      if (linkError) {
-        setGenerationError(linkError.message)
-        setGenerating(false)
-        setGenerationProgress(null)
-        return
-      }
-    }
-
-    // Propagation de la tranche de distance — rattrapage intégré, comme
-    // pour les enfants (0015) : chaque génération réaligne la tranche de
-    // TOUS les trajets générés du foyer sur celle de leur activité
-    // (trajets d'avant la migration, tranche modifiée par le parent).
-    // ON CONFLICT DO NOTHING ne met pas à jour les trajets existants :
-    // ce passage s'en charge. Conducteurs et annulations non touchés.
-    const bandGroups = new Map<DistanceBand, Array<string>>()
-    for (const a of activitiesResult.data) {
-      const group = bandGroups.get(a.distance_band) ?? []
-      group.push(a.id)
-      bandGroups.set(a.distance_band, group)
-    }
-    for (const [band, activityIds] of bandGroups) {
-      const { error: bandError } = await supabase
-        .from('trips')
-        .update({ distance_band: band })
-        .eq('household_id', householdId)
-        .in('activity_id', activityIds)
-
-      if (bandError) {
-        setGenerationError(bandError.message)
-        setGenerating(false)
-        setGenerationProgress(null)
-        return
-      }
-    }
-
-    const horizonLabel =
-      HORIZONS.find((h) => h.days === horizonDays)?.label ??
-      `${horizonDays} jours`
-    setGenerationMessage(
-      insertedCount === 0
-        ? 'Tout est à jour : aucun nouveau trajet à créer. Enfants rattachés vérifiés sur les trajets existants.'
-        : `${insertedCount} trajet${insertedCount > 1 ? 's' : ''} créé${insertedCount > 1 ? 's' : ''} sur ${horizonLabel}, enfants rattachés.`,
-    )
-    setGenerating(false)
-    setGenerationProgress(null)
-    onChanged()
   }
 
   // Trajets groupés par jour calendaire bruxellois.
@@ -781,6 +488,50 @@ function WeekScreen({
             <p className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-800">
               Une erreur est survenue : {generationError}
             </p>
+          )}
+
+          {/* Semaine visible vide alors que des trajets existent plus
+              loin : guider vers la bonne semaine plutôt que laisser une
+              grille muette. */}
+          {trips.length === 0 && nextTripAt && (
+            <div className="mt-3 flex flex-wrap items-center gap-3 rounded-md bg-blue-50 p-3 text-sm text-blue-900">
+              <p>
+                Aucun trajet cette semaine. Vos prochains trajets commencent le{' '}
+                {new Date(nextTripAt).toLocaleDateString('fr-BE', {
+                  timeZone: BRUSSELS_TZ,
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                })}
+                .
+              </p>
+              <button
+                type="button"
+                onClick={onGoToNextTrip}
+                className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                Afficher cette semaine-là
+              </button>
+            </div>
+          )}
+
+          {/* Aucun trajet nulle part : expliquer quoi faire. */}
+          {trips.length === 0 && !nextTripAt && (
+            <div className="mt-3 rounded-md bg-gray-50 p-4 text-sm text-gray-700">
+              <p className="font-medium text-gray-900">
+                Aucun trajet pour le moment.
+              </p>
+              <p className="mt-1">
+                Créez une activité pour un enfant : ses trajets aller-retour
+                apparaîtront ici automatiquement, jusqu’à trois mois à l’avance.
+              </p>
+              <Link
+                to="/activites"
+                className="mt-2 inline-block rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                Créer une activité
+              </Link>
+            </div>
           )}
 
           {childrenList.length > 0 && (

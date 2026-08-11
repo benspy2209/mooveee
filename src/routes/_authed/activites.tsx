@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
+import { DEFAULT_HORIZON_DAYS, generateTripsForHousehold } from '@/lib/trips'
 
 import type { FormEvent } from 'react'
 import type { Database } from '@/types/database'
@@ -289,6 +290,27 @@ function ActivitiesScreen({
 }) {
   const [adding, setAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  // Résultat de la génération automatique après enregistrement d'une
+  // activité : confirmation ou avertissement, affiché ici car le
+  // formulaire se ferme.
+  const [notice, setNotice] = useState<{
+    kind: 'success' | 'warning'
+    text: string
+  } | null>(null)
+
+  function handleDone(generationWarning: string | null) {
+    setAdding(false)
+    setEditingId(null)
+    setNotice(
+      generationWarning
+        ? { kind: 'warning', text: generationWarning }
+        : {
+            kind: 'success',
+            text: 'Activité enregistrée : ses trajets sont prêts jusqu’à trois mois à l’avance. Retrouvez-les dans « La semaine ».',
+          },
+    )
+    onChanged()
+  }
 
   return (
     <main className="min-h-screen bg-gray-50 px-4 py-8">
@@ -297,6 +319,18 @@ function ActivitiesScreen({
           <h1 className="text-xl font-semibold text-gray-900">
             Les activités des enfants
           </h1>
+
+          {notice && (
+            <p
+              className={`mt-4 rounded-md p-3 text-sm ${
+                notice.kind === 'success'
+                  ? 'bg-green-50 text-green-800'
+                  : 'bg-amber-50 text-amber-800'
+              }`}
+            >
+              {notice.text}
+            </p>
+          )}
 
           {activities.length === 0 && !adding && (
             <p className="mt-4 text-sm text-gray-600">
@@ -323,10 +357,7 @@ function ActivitiesScreen({
                           householdId={householdId}
                           childrenList={childrenList}
                           activity={activity}
-                          onDone={() => {
-                            setEditingId(null)
-                            onChanged()
-                          }}
+                          onDone={handleDone}
                           onCancel={() => setEditingId(null)}
                         />
                       </li>
@@ -352,10 +383,7 @@ function ActivitiesScreen({
               <ActivityForm
                 householdId={householdId}
                 childrenList={childrenList}
-                onDone={() => {
-                  setAdding(false)
-                  onChanged()
-                }}
+                onDone={handleDone}
                 onCancel={() => setAdding(false)}
               />
             </div>
@@ -484,7 +512,7 @@ function ActivityForm({
   householdId: string
   childrenList: Array<ChildOption>
   activity?: Activity
-  onDone: () => void
+  onDone: (generationWarning: string | null) => void
   onCancel: () => void
 }) {
   const [childId, setChildId] = useState(
@@ -558,7 +586,24 @@ function ActivityForm({
       return
     }
 
-    onDone()
+    // Génération automatique : les trajets de l'activité apparaissent
+    // sans passer par « Générer les trajets » (retour porteur). Horizon
+    // par défaut 3 mois, idempotente : n'ajoute que le manquant, ne
+    // touche ni conducteurs ni annulations. Un échec ici ne remet pas
+    // en cause l'activité enregistrée : il est signalé, et le bouton de
+    // /semaine reste un rattrapage.
+    let generationWarning: string | null = null
+    try {
+      await generateTripsForHousehold(householdId, DEFAULT_HORIZON_DAYS)
+    } catch (generationError) {
+      generationWarning = `L’activité est enregistrée, mais la création de ses trajets a échoué : ${
+        generationError instanceof Error
+          ? generationError.message
+          : 'réponse inattendue du serveur'
+      }. Relancez « Générer les trajets » depuis La semaine.`
+    }
+
+    onDone(generationWarning)
   }
 
   const idPrefix = activity ? `activity-${activity.id}` : 'activity-new'
