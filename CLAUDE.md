@@ -5,8 +5,11 @@ Application communautaire de partage de trajets enfants. Client externe.
 Documents de référence, par ordre d'autorité :
 1. **Note d'arbitrage Mooves v2** (juillet 2026) — fait foi sur tout ce qui
    touche aux Mooves, à la réciprocité et au modèle économique.
-2. **Instructions Techniques Partenaire v2** (juillet 2026) — fait foi sur
-   la façon d'implémenter.
+2. **Instructions Techniques Partenaire v4** (août 2026, étiqueté
+   « Version 3 » en page de garde — divergence signalée à Stéphane) — fait
+   foi sur la façon d'implémenter. Remplace la v2. Nouveautés : lieux
+   intelligents (§7), trajets enrichis (§4.1), détection d'opportunités en
+   observation (§12), couches de hub préparées mais gelées (§6).
 3. **Doc1 De A à Z v4** (mai 2026) — fait foi sur le fond produit, sauf
    contradiction avec les deux précédents.
 
@@ -413,11 +416,21 @@ Ne pas coder de pourcentage fixe d'automatisation.
 4. ~~Trajets, génération jusqu'à 1 an, vue Semaine, attribution, annulation~~
 5. ~~Hubs : création, code, adhésion, pacte, publication, demandes de place~~
 6. ~~Mooves : ledger, solde, écran équilibre privé, fonds de solidarité~~
-7. **Matching Macarons 3D**, explication en 3 points
-8. Sécurité enfant : bulletin de trajet, meeting points, fenêtre de confiance
-9. Mode Concierge, automatisations de base
+7. ~~Matching Macarons 3D~~ **ABANDONNÉ** (décision Ben, 15/08/2026) :
+   remplacé par la détection d'opportunités du doc v4 §12. La migration
+   0013 (`trip_labels_similar`, `hub_trip_matching_needs_count`) reste en
+   base et sert de brique à `detect_opportunities()`.
+8. ~~Sécurité enfant : bulletin de trajet, meeting points, fenêtre de confiance~~
+9. ~~Mode Concierge, automatisations de base~~
+7bis. **Chantier v4** (en cours) : lieux intelligents (places, Photon/OSM,
+   favoris), trajets enrichis (linked_trip_id, has_children),
+   hub_relations gelé `prepared`, opportunity_matches en observation pure,
+   notification_preferences non calibrées. Migrations 0019-0020.
+   **Arbitrage : `places` = lieux publics uniquement, jamais un domicile.**
 10. Métriques institutionnelles, sans facturation automatique
-11. Module défraiement, développé non activé
+11. Module défraiement : **schéma seulement** (v4 §9.1 durcit la v2 : la
+    logique métier — calcul de distance, notes, plafonds — ne se code pas
+    avant validation juridique)
 12. Audit RLS et droits d'exécution complets, seuil de réidentification,
     test d'effacement
 

@@ -331,6 +331,24 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   sur /semaine + détails par écran (chips Matteo, cellules trajets
   bleues, inner box gray equilibre.tsx:180).
 
+- 15/08 : CHANTIER v4 lancé (doc Stéphane « Instructions Techniques
+  Partenaire v4 », étiqueté Version 3 en interne — à clarifier avec lui).
+  Décisions Ben : geocoding Photon/OSM (UE, sans clé), Macarons 3D
+  abandonnés (remplacés par détection d'opportunités). Plan approuvé
+  (~/.claude/plans/velvety-gathering-goblet.md). Phase 1 FAITE :
+  migrations 0019 (places lieux publics uniquement + household_places
+  favoris + activities.place_id + trips origin/destination_place_id/
+  linked_trip_id/has_children + hub_trips_view v4 avec
+  destination_place_id) et 0020 (hub_relations gelé prepared,
+  notification_preferences self-RLS non calibrées, opportunity_matches
+  RLS muette volontaire, detect_opportunities() definer révoquée +
+  pg_cron 03h15 gardé). CLAUDE.md mis à jour (référence v4, étape 7
+  abandonnée, 7bis chantier v4, défraiement durci « schéma seulement »).
+  CHECKPOINT BLOQUANT : Ben applique 0019+0020 puis régénère les types.
+  Phases restantes : 2 (PlaceField Photon + lib/places.ts + propagation
+  place_id dans lib/trips.ts), 3 (appariement linked_trip_id + badge A/R
+  + formulaire « Je passe par là » has_children=false), vérifs du plan.
+
 ## Next step exact
 0. Ben : SUPABASE_SERVICE_ROLE_KEY dans .env.local (dashboard →
    Project Settings → API → service_role), puis
