@@ -7,3 +7,5 @@
 [2026-08-05] | Policy users_hub_select écrite pour exposer les noms aux co-membres de hub : une policy RLS filtre les lignes, pas les colonnes — téléphone et code postal devenaient lisibles entre inconnus | Pour exposer un sous-ensemble de colonnes d'une table sensible à un cercle élargi, toujours passer par une fonction security definer (ou une vue) qui ne renvoie que les colonnes voulues, jamais par une policy select sur la table. Côté hub : hub_member_profiles() uniquement, jamais users en direct.
 
 [2026-08-09] | mooves_amount_for_band créée en 0015 sans révocation : exposée via PostgREST, corrigée par Ben en 0016 | Toute nouvelle fonction security definer arrive avec sa révocation dans la MÊME migration, même en lecture seule. Seule exception : un point d'entrée voulu qui vérifie lui-même l'identité de l'appelant.
+
+[2026-08-15] | Fin de tâche annoncée sans dire explicitement si commit et push étaient faits — Ben a dû demander deux fois | Chaque réponse de fin de tâche se termine par l'état git explicite : « commité (hash) + pushé » ou « commité, PAS pushé » ou « rien à committer ». Toujours, sans exception.
