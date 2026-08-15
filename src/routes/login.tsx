@@ -63,7 +63,7 @@ function LoginPage() {
         {mode === 'code' ? (
           <>
             <p className="mt-2 text-sm text-gray-600">
-              Entrez votre adresse email et votre code d'accès.
+              Entrez votre code d'accès.
             </p>
             <AccessCodeLogin />
             <button
@@ -233,20 +233,35 @@ function EmailOtpLogin({
 // Connexion par code d'accès : mot de passe Supabase posé par
 // l'administrateur via `npm run set-dev-password`. Mode principal tant
 // que l'envoi d'email (SMTP plafonné) n'est pas branché.
+// Le préfixe du code (avant le premier tiret) désigne le compte ; le
+// code complet est le mot de passe. Seuls les emails figurent dans le
+// bundle, jamais les codes.
+const CODE_EMAILS: Record<string, string> = {
+  ben: 'debruijneb@gmail.com',
+  steph: 'swauquaire@gmail.com',
+  mooveee: 'mooveee.app@proton.me',
+}
+
 function AccessCodeLogin() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [accessCode, setAccessCode] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
-    setSubmitting(true)
 
+    const code = accessCode.trim().toLowerCase()
+    const email = CODE_EMAILS[code.split('-')[0]]
+    if (!email) {
+      setError('Code d’accès invalide.')
+      return
+    }
+
+    setSubmitting(true)
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
-      password,
+      password: code,
     })
     setSubmitting(false)
 
@@ -258,7 +273,7 @@ function AccessCodeLogin() {
         return
       }
       if (/invalid login credentials/i.test(signInError.message)) {
-        setError('Email ou code d’accès incorrect.')
+        setError('Code d’accès invalide.')
         return
       }
       setError(signInError.message)
@@ -269,25 +284,6 @@ function AccessCodeLogin() {
     <form onSubmit={handleSubmit} className="mt-6 space-y-4">
       <div>
         <label
-          htmlFor="code-email"
-          className="block text-sm font-medium text-gray-700"
-        >
-          Adresse email
-        </label>
-        <input
-          id="code-email"
-          type="email"
-          required
-          autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          placeholder="vous@exemple.be"
-        />
-      </div>
-
-      <div>
-        <label
           htmlFor="access-code"
           className="block text-sm font-medium text-gray-700"
         >
@@ -295,12 +291,15 @@ function AccessCodeLogin() {
         </label>
         <input
           id="access-code"
-          type="password"
+          type="text"
           required
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          autoComplete="off"
+          autoCapitalize="none"
+          spellCheck={false}
+          value={accessCode}
+          onChange={(e) => setAccessCode(e.target.value)}
+          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-center text-base tracking-wide focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          placeholder="ex. ben-12345678"
         />
       </div>
 
