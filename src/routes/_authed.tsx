@@ -71,7 +71,12 @@ function AppHeader({ pathname }: { pathname: string }) {
       if (event.key === 'Escape') setOpen(false)
     }
     window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = previousOverflow
+    }
   }, [open])
 
   return (

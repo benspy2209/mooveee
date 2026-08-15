@@ -277,6 +277,24 @@ button,
 a {
   transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease,
     transform 180ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Feedback au pointerdown : presse rapide (100ms), relâche portée par la
+   transition 180ms ci-dessus. Cible les boutons et les liens stylés en
+   bouton (block + rounded-md), pas les liens textuels. */
+button:not(:disabled):active,
+a:where(.block.rounded-md):active {
+  transform: scale(0.97);
+  transition-duration: 100ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button:not(:disabled):active,
+  a:where(.block.rounded-md):active {
+    transform: none;
+    filter: brightness(0.92);
+  }
 }
 
 .island-kicker {
