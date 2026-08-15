@@ -289,6 +289,13 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   reste valide + bouton retour/renvoi. ACTION BEN : ajouter
   {{ .Token }} au template email Supabase (Authentication → Emails →
   Magic Link), sinon l'email ne contient que le lien.
+  Suite (demande Ben, sans email du tout) : connexion par CODE D'ACCÈS
+  fixe en mode principal sur /login (commit 85ee5c5, déployé) —
+  AccessCodeLogin (ex-DevPasswordLogin dégatée du DEV, signInWithPassword),
+  bascule vers le flux email en secours. Codes posés via
+  set-dev-password et VÉRIFIÉS (session OK ×3) : debruijneb@gmail.com,
+  swauquaire@gmail.com, mooveee.app@proton.me (codes transmis à Ben en
+  session, pas écrits ici). Provisoire jusqu'au SMTP branché.
 
 ## Next step exact
 0. Ben : SUPABASE_SERVICE_ROLE_KEY dans .env.local (dashboard →
