@@ -366,6 +366,21 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   Stéphane). Notes : divergence v4/Version 3 à clarifier avec
   Stéphane ; champ date natif = saisie JS dans les tests Chrome.
 
+- 15/08 : AUDIT ÉTAPE 12 FAIT (migration 0021, appliquée + testée,
+  commit f799ce1) pendant l'attente des retours Stéphane sur le
+  parcours de test (artefact claude.ai/code/artifact/621fa258…).
+  Résolu : anon 0 fonction exécutable (revoke PUBLIC + grants
+  explicites authenticated ×20 + default privileges), private_note →
+  table trip_private_notes (RLS foyer, colonne droppée, 0 donnée),
+  doublons accepte purgés (ils existaient !) + index unique partiel,
+  erase_user(uuid) créée/révoquée et TESTÉE en conditions réelles
+  (2 comptes jetables : effacement total vérifié sur 14 compteurs,
+  trajet tiers détaché, foyer voisin intact). Smoke tests OK (policies,
+  RPC, update avec contrainte check, anon refusé 42501, erase refusée
+  aux clients). Types régénérés. CLAUDE.md section dette réécrite.
+  Reste étape 12 : purge Storage côté app avant erase_user, seuil de
+  réidentification (avec l'étape 10), validation AIPD (externe).
+
 ## Next step exact
 0. Ben : SUPABASE_SERVICE_ROLE_KEY dans .env.local (dashboard →
    Project Settings → API → service_role), puis

@@ -439,28 +439,37 @@ validation de la DPIA.
 
 ---
 
-## Dette identifiée, à traiter à l'étape 12
+## Dette identifiée
 
-- **`private_note` lisible côté hub.** `trips_hub_select` autorise la lecture
-  des trajets publiés, et une RLS ne filtre pas les colonnes : un membre du
-  hub peut lire `private_note` par un select direct sur `trips`. La
-  discipline tient au code, pas à la base. À corriger par déplacement du
-  champ dans une table séparée ou par restriction de la policy.
-- **Aucune distance sur les trajets.** `trips.distance_km` est toujours
-  `null`, donc le barème Mooves applique systématiquement le premier palier
-  (30 unités) quel que soit le trajet réel. Le barème existe mais ne
-  s'applique jamais. Nécessite soit une saisie manuelle sur l'activité, soit
-  un calcul, ce qui suppose des coordonnées et donc un arbitrage
-  géolocalisation. **Question produit à trancher par le porteur.**
-- **Demandes acceptées en double.** L'index unique sur `trip_requests` ne
-  couvre que les demandes en attente : deux demandes acceptées pour le même
-  enfant sur le même trajet peuvent coexister. Sans conséquence en base
-  grâce à l'idempotence, mais confus à l'affichage.
+Audit étape 12 passé le 15/08/2026 (migration 0021). Résolus :
+- ~~`private_note` lisible côté hub~~ → colonne supprimée de `trips`,
+  table dédiée `trip_private_notes` (RLS foyer). 0 donnée migrée (aucune
+  note n'existait).
+- ~~Demandes acceptées en double~~ → doublons purgés + index unique
+  partiel `trip_requests_accepted_unique` (status = 'accepte').
+- ~~Audit systématique~~ → fait : 5 tables muettes = les 4
+  institutionnelles (étape 10) + `opportunity_matches` (voulu) ;
+  `anon` ne peut plus exécuter AUCUNE fonction (leçon : anon hérite du
+  grant implicite à PUBLIC — révoquer PUBLIC puis granter explicitement
+  `authenticated`, y compris pour les futures fonctions via
+  `alter default privileges`).
+- **Effacement RGPD** : `erase_user(uuid)` (0021), révoquée pour tous les
+  rôles clients, exécutée par l'opérateur via SQL. Testée en conditions
+  réelles le 15/08 : utilisateur complet (foyer, enfant, activité, hub
+  possédé, trajets, ledger, consentements, note privée) effacé à zéro ;
+  trajet d'un autre foyer où il conduisait proprement détaché
+  (driver null + non_couvert) ; l'autre foyer intact. Les objets Storage
+  (photos) se purgent côté application AVANT l'appel.
+
+Encore ouverts :
+- **Aucune distance sur les trajets.** Le barème Mooves par tranche (0015)
+  s'applique ; `distance_km` reste `null`. Les coordonnées `places` (0019)
+  permettraient désormais un calcul — arbitrage porteur toujours requis.
 - **Invitations de foyer** : créent une ligne mais n'envoient aucun email et
   n'ont pas de parcours d'acceptation.
 - **Garde alternée** : un enfant ne peut appartenir qu'à un seul foyer. Le
-  Doc1 évoque le cas, le schéma ne le permet pas. Les contraintes `check` ne
-  se réévaluent pas si un enfant change de foyer.
-- **Audit systématique** : lister toutes les tables avec RLS activée et
-  aucune policy, et toutes les fonctions `security definer` exécutables par
-  `authenticated`, avant le pilote.
+  Doc1 évoque le cas, le schéma ne le permet pas.
+- **Seuil de réidentification** : le paramètre existe, il ne contraint
+  encore rien (aucun rapport agrégé généré — étape 10).
+- **AIPD** : validation professionnelle en attente, y compris le nouveau
+  traitement de détection d'opportunités (v4 §11.3).
