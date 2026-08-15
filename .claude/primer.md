@@ -272,6 +272,17 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   z-40), pas de régression trouvée. Le bouton Générer reste (horizons
   plus longs + rattrapage).
 
+- 15/08 : audit fluidité (skill /apple) + passe A1 (commit 901b108) —
+  feedback presse global en CSS (button:active + liens .block.rounded-md,
+  scale 0.97 presse 100ms / relâche 180ms, tap-highlight neutralisé,
+  bloc prefers-reduced-motion : brightness au lieu du scale) +
+  scroll-lock body quand le menu mobile est ouvert (_authed.tsx).
+  Vérifié : tsc OK, dev server sert les règles. Restes de l'audit,
+  par impact : drawer nav gestuel spring (A2/A5/A6, entrée/sortie
+  animée + swipe), modale /semaine sans animation ni scroll-lock,
+  swipe changement de semaine, unification visuelle landing lagoon
+  vs app gray/blue (rise-in et tw-animate-css inutilisés).
+
 ## Next step exact
 0. Ben : SUPABASE_SERVICE_ROLE_KEY dans .env.local (dashboard →
    Project Settings → API → service_role), puis
@@ -292,3 +303,9 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   régénérés). Statut exact de 0004→0008 non confirmé un par un —
   vérifier au premier test si une policy manque.
 - .gitignore modifié non commité (préexistant, pas touché).
+- `vite build` CASSÉ sur main (constaté 15/08, préexistant, prouvé par
+  stash) : MISSING_EXPORT `_getRenderedMatches`/`bindSsrResponseToRequest`
+  dans @tanstack/router-core — dérive des deps en "latest" sans lockfile
+  commité (pnpm-lock.yaml + pnpm-workspace.yaml untracked). Le dev
+  server tourne. À régler : pinner les versions TanStack cohérentes +
+  commiter le lockfile.
