@@ -1403,6 +1403,49 @@ export type Database = {
           },
         ]
       }
+      trip_private_notes: {
+        Row: {
+          household_id: string
+          note: string
+          trip_id: string
+          updated_at: string
+        }
+        Insert: {
+          household_id: string
+          note: string
+          trip_id: string
+          updated_at?: string
+        }
+        Update: {
+          household_id?: string
+          note?: string
+          trip_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_private_notes_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trip_private_notes_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: true
+            referencedRelation: "hub_trips_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trip_private_notes_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: true
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trip_requests: {
         Row: {
           child_id: string
@@ -1497,7 +1540,6 @@ export type Database = {
           origin_lat: number | null
           origin_lng: number | null
           origin_place_id: string | null
-          private_note: string | null
           published_to_hub: boolean
           scheduled_at: string
           seats_available: number | null
@@ -1526,7 +1568,6 @@ export type Database = {
           origin_lat?: number | null
           origin_lng?: number | null
           origin_place_id?: string | null
-          private_note?: string | null
           published_to_hub?: boolean
           scheduled_at: string
           seats_available?: number | null
@@ -1555,7 +1596,6 @@ export type Database = {
           origin_lat?: number | null
           origin_lng?: number | null
           origin_place_id?: string | null
-          private_note?: string | null
           published_to_hub?: boolean
           scheduled_at?: string
           seats_available?: number | null
@@ -1809,6 +1849,7 @@ export type Database = {
         Returns: boolean
       }
       detect_opportunities: { Args: never; Returns: number }
+      erase_user: { Args: { p_user: string }; Returns: undefined }
       hub_for_join_code: {
         Args: { p_code: string }
         Returns: {
