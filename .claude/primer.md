@@ -303,9 +303,8 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   régénérés). Statut exact de 0004→0008 non confirmé un par un —
   vérifier au premier test si une policy manque.
 - .gitignore modifié non commité (préexistant, pas touché).
-- `vite build` CASSÉ sur main (constaté 15/08, préexistant, prouvé par
-  stash) : MISSING_EXPORT `_getRenderedMatches`/`bindSsrResponseToRequest`
-  dans @tanstack/router-core — dérive des deps en "latest" sans lockfile
-  commité (pnpm-lock.yaml + pnpm-workspace.yaml untracked). Le dev
-  server tourne. À régler : pinner les versions TanStack cohérentes +
-  commiter le lockfile.
+- ~~`vite build` cassé sur main~~ RÉPARÉ le 15/08 (commit 176b48d) :
+  toutes les deps @tanstack passées de "latest" à des versions pinnées
+  (^), champ package.json "pnpm" obsolète retiré (→ allowBuilds dans
+  pnpm-workspace.yaml), lockfile régénéré et commité. Build + prerender
+  + _shell.html vérifiés. Règle : ne plus jamais remettre "latest".
