@@ -344,10 +344,27 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   RLS muette volontaire, detect_opportunities() definer révoquée +
   pg_cron 03h15 gardé). CLAUDE.md mis à jour (référence v4, étape 7
   abandonnée, 7bis chantier v4, défraiement durci « schéma seulement »).
-  CHECKPOINT BLOQUANT : Ben applique 0019+0020 puis régénère les types.
-  Phases restantes : 2 (PlaceField Photon + lib/places.ts + propagation
-  place_id dans lib/trips.ts), 3 (appariement linked_trip_id + badge A/R
-  + formulaire « Je passe par là » has_children=false), vérifs du plan.
+  CHANTIER v4 TERMINÉ le 15/08 (commits 4fa0d35→11b0bee, poussés) :
+  migrations 0019+0020 APPLIQUÉES via MCP Supabase (Ben a levé le
+  blocage du classifieur en ajoutant apply_migration/execute_sql aux
+  permissions locales — « fais tout toi-même ») ; vérifs SQL OK
+  (detect_opportunities révoquée, opportunity_matches 0 policy + RLS,
+  cron pg_cron 03h15 planifié) ; types régénérés (CLI). Phase 2 :
+  src/lib/places.ts (Photon UE sans clé, ensurePlace dédup
+  external_place_id, favoris) + src/components/PlaceField.tsx
+  (debounce 300ms, favoris étoilés en tête, texte libre en secours) +
+  câblé dans activites.tsx + propagation place_id/rattrapage dans
+  lib/trips.ts. Phase 3 : appariement linked_trip_id A/R (même jour
+  Bruxelles, idempotent), badge « Aller-retour lié » dans la modale,
+  formulaire « Je passe par là » sur /semaine (has_children=false,
+  couvert_ouvert, publié au hub, conducteur=soi). VÉRIFIÉ end-to-end
+  Chrome + SQL : autocomplete « hall omnisports waterloo » → place
+  créée 1×, favori OK, 104 trajets avec place_id, 208 appariés,
+  passage adulte 18/08 14h locale = 12:00 UTC correct.
+  detect_opportunities() tourne (0 match = normal, il faut un besoin
+  non couvert d'un AUTRE foyer — à re-tester avec les données
+  Stéphane). Notes : divergence v4/Version 3 à clarifier avec
+  Stéphane ; champ date natif = saisie JS dans les tests Chrome.
 
 ## Next step exact
 0. Ben : SUPABASE_SERVICE_ROLE_KEY dans .env.local (dashboard →
