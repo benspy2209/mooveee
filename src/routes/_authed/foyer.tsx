@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
+import { Baby, CalendarHeart, Mail } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 
@@ -129,8 +130,8 @@ function FoyerPage() {
 
   if (loadError) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-        <div className="w-full max-w-sm rounded-lg bg-white p-8 shadow">
+      <main className="flex min-h-screen items-center justify-center px-4">
+        <div className="w-full max-w-sm island-shell rounded-3xl p-8">
           <p className="rounded-md bg-red-50 p-3 text-sm text-red-800">
             Une erreur est survenue : {loadError}
           </p>
@@ -140,7 +141,7 @@ function FoyerPage() {
               setLoading(true)
               void load()
             }}
-            className="mt-4 w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+            className="mt-4 w-full btn-ghost px-4 py-2 text-sm"
           >
             Réessayer
           </button>
@@ -206,9 +207,9 @@ function CreateHouseholdScreen({ onCreated }: { onCreated: () => void }) {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm rounded-lg bg-white p-8 shadow">
-        <h1 className="text-xl font-semibold text-gray-900">
+    <main className="flex min-h-screen items-center justify-center px-4">
+      <div className="w-full max-w-sm island-shell rounded-3xl p-8">
+        <h1 className="display-title text-2xl font-semibold">
           Créez votre foyer
         </h1>
         <p className="mt-2 text-sm text-gray-600">
@@ -230,7 +231,7 @@ function CreateHouseholdScreen({ onCreated }: { onCreated: () => void }) {
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
             />
           </div>
 
@@ -243,7 +244,7 @@ function CreateHouseholdScreen({ onCreated }: { onCreated: () => void }) {
           <button
             type="submit"
             disabled={submitting || name.trim() === ''}
-            className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full btn-lagoon px-4 py-2.5 text-sm font-semibold"
           >
             {submitting ? 'Création en cours…' : 'Créer le foyer'}
           </button>
@@ -269,109 +270,86 @@ function HouseholdScreen({
   )
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8">
-      <div className="mx-auto w-full max-w-lg space-y-6">
-        <div className="rounded-lg bg-white p-8 shadow">
-          <h1 className="text-xl font-semibold text-gray-900">
+    <main className="min-h-screen px-4 py-8">
+      <div className="mx-auto w-full max-w-lg space-y-4">
+        <div className="island-shell rise-in rounded-3xl p-8">
+          <p className="island-kicker">Mon foyer</p>
+          <h1 className="display-title mt-1 text-3xl font-semibold">
             {household.name}
           </h1>
 
-          <h2 className="mt-6 text-sm font-medium text-gray-700">Membres</h2>
-          <ul className="mt-2 divide-y divide-gray-100">
-            {household.members.map((member) => (
-              <li
-                key={member.id}
-                className="flex items-center justify-between py-3"
-              >
-                <span className="text-sm text-gray-900">
+          <ul className="mt-6 space-y-3">
+            {household.members.map((member, index) => (
+              <li key={member.id} className="flex items-center gap-3">
+                <span className={`avatar-dot alt-${index % 3}`}>
+                  {(member.users?.first_name ?? '?').charAt(0).toUpperCase()}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">
                   {member.users
                     ? `${member.users.first_name}${member.users.last_name ? ` ${member.users.last_name}` : ''}`
                     : 'Profil non renseigné'}
                   {member.user_id === currentUserId && (
-                    <span className="text-gray-400"> (vous)</span>
+                    <span className="font-normal text-gray-400"> (vous)</span>
                   )}
                 </span>
-                <span className="text-sm text-gray-500">
+                <span className="btn-ghost px-3 py-1 text-xs">
                   {ROLE_LABELS[member.role]}
                 </span>
               </li>
             ))}
+            {household.invitations.map((invitation) => (
+              <li
+                key={invitation.id}
+                className="flex items-center gap-3 opacity-70"
+              >
+                <span className="avatar-dot" style={{ opacity: 0.45 }}>
+                  <Mail size={15} aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm">
+                  {invitation.email}
+                </span>
+                <span className="btn-ghost px-3 py-1 text-xs">Invité·e</span>
+              </li>
+            ))}
           </ul>
-
-          {household.invitations.length > 0 && (
-            <>
-              <h2 className="mt-6 text-sm font-medium text-gray-700">
-                Invitations en attente
-              </h2>
-              <ul className="mt-2 divide-y divide-gray-100">
-                {household.invitations.map((invitation) => (
-                  <li
-                    key={invitation.id}
-                    className="flex items-center justify-between py-3"
-                  >
-                    <span className="text-sm text-gray-900">
-                      {invitation.email}
-                    </span>
-                    <span className="text-sm text-gray-500">
-                      {ROLE_LABELS[invitation.role]}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
 
           {isAdmin && (
             <InviteForm householdId={household.id} onInvited={onChanged} />
           )}
+        </div>
 
+        <div className="grid grid-cols-2 gap-4">
           <Link
             to="/enfants"
-            className="mt-4 block w-full rounded-md border border-gray-300 px-4 py-2 text-center text-sm font-medium text-gray-700 hover:bg-gray-100"
+            className="island-shell feature-card rise-in d-1 flex flex-col items-start gap-2 rounded-3xl p-5"
           >
-            Gérer les enfants du foyer
+            <span className="avatar-dot alt-1">
+              <Baby size={18} aria-hidden />
+            </span>
+            <span className="text-sm font-semibold">Les enfants</span>
+            <span className="text-xs" style={{ color: 'var(--sea-ink-soft)' }}>
+              Profils et photos du foyer
+            </span>
           </Link>
 
           <Link
             to="/activites"
-            className="mt-3 block w-full rounded-md border border-gray-300 px-4 py-2 text-center text-sm font-medium text-gray-700 hover:bg-gray-100"
+            className="island-shell feature-card rise-in d-2 flex flex-col items-start gap-2 rounded-3xl p-5"
           >
-            Gérer les activités des enfants
-          </Link>
-
-          <Link
-            to="/semaine"
-            className="mt-3 block w-full rounded-md border border-gray-300 px-4 py-2 text-center text-sm font-medium text-gray-700 hover:bg-gray-100"
-          >
-            Voir la semaine et les trajets
-          </Link>
-
-          <Link
-            to="/hubs"
-            className="mt-3 block w-full rounded-md border border-gray-300 px-4 py-2 text-center text-sm font-medium text-gray-700 hover:bg-gray-100"
-          >
-            Les hubs
-          </Link>
-
-          <Link
-            to="/demandes"
-            className="mt-3 block w-full rounded-md border border-gray-300 px-4 py-2 text-center text-sm font-medium text-gray-700 hover:bg-gray-100"
-          >
-            Les demandes de place
-          </Link>
-
-          <Link
-            to="/equilibre"
-            className="mt-3 block w-full rounded-md border border-gray-300 px-4 py-2 text-center text-sm font-medium text-gray-700 hover:bg-gray-100"
-          >
-            Mon équilibre d’entraide
+            <span className="avatar-dot alt-2">
+              <CalendarHeart size={18} aria-hidden />
+            </span>
+            <span className="text-sm font-semibold">Les activités</span>
+            <span className="text-xs" style={{ color: 'var(--sea-ink-soft)' }}>
+              Foot, musique, école… et leurs trajets
+            </span>
           </Link>
         </div>
 
         <button
           type="button"
           onClick={onSignOut}
-          className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+          className="rise-in d-3 w-full px-4 py-2 text-sm text-gray-500 hover:text-gray-700"
         >
           Se déconnecter
         </button>
@@ -427,7 +405,7 @@ function InviteForm({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-6 w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+        className="mt-6 w-full btn-lagoon px-4 py-2.5 text-sm font-semibold"
       >
         Inviter un adulte responsable
       </button>
@@ -450,7 +428,7 @@ function InviteForm({
           autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
         />
       </div>
 
@@ -465,7 +443,7 @@ function InviteForm({
           id="invite-role"
           value={role}
           onChange={(e) => setRole(e.target.value as HouseholdRole)}
-          className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
         >
           {Object.entries(ROLE_LABELS).map(([value, label]) => (
             <option key={value} value={value}>
@@ -488,14 +466,14 @@ function InviteForm({
             setOpen(false)
             setError(null)
           }}
-          className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+          className="w-full btn-ghost px-4 py-2 text-sm"
         >
           Annuler
         </button>
         <button
           type="submit"
           disabled={submitting || email.trim() === ''}
-          className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full btn-lagoon px-4 py-2.5 text-sm font-semibold"
         >
           {submitting ? 'Envoi…' : 'Inviter'}
         </button>

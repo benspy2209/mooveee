@@ -447,6 +447,58 @@ a:where(.block.rounded-md):active {
   box-shadow: 0 0 0 3px rgba(79, 184, 178, 0.25);
 }
 
+.btn-ghost {
+  border: 1px solid var(--chip-line);
+  background: var(--chip-bg);
+  color: var(--lagoon-deep);
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.btn-ghost:hover {
+  background: var(--link-bg-hover);
+  border-color: color-mix(in oklab, var(--lagoon-deep) 40%, var(--chip-line));
+}
+
+.btn-ghost:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Pastille avatar : initiale sur fond lagon, teinte stable par index. */
+.avatar-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #fff;
+  background: linear-gradient(150deg, var(--lagoon), var(--lagoon-deep));
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4) inset;
+}
+
+.avatar-dot.alt-1 {
+  background: linear-gradient(150deg, #57b98a, var(--palm));
+}
+
+.avatar-dot.alt-2 {
+  background: linear-gradient(150deg, #e8b04b, #c98a2e);
+}
+
+/* Entrées en cascade sur les listes de cartes. */
+.rise-in.d-1 {
+  animation-delay: 60ms;
+}
+.rise-in.d-2 {
+  animation-delay: 120ms;
+}
+.rise-in.d-3 {
+  animation-delay: 180ms;
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;

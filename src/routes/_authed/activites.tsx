@@ -200,8 +200,8 @@ function ActivitesPage() {
 
   if (loadError) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-        <div className="w-full max-w-sm rounded-lg bg-white p-8 shadow">
+      <main className="flex min-h-screen items-center justify-center px-4">
+        <div className="w-full max-w-sm island-shell rounded-3xl p-8">
           <p className="rounded-md bg-red-50 p-3 text-sm text-red-800">
             Une erreur est survenue : {loadError}
           </p>
@@ -211,7 +211,7 @@ function ActivitesPage() {
               setLoading(true)
               void load()
             }}
-            className="mt-4 w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+            className="mt-4 w-full btn-ghost px-4 py-2 text-sm"
           >
             Réessayer
           </button>
@@ -260,15 +260,15 @@ function MessageScreen({
   linkLabel: string
 }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm rounded-lg bg-white p-8 shadow">
-        <h1 className="text-xl font-semibold text-gray-900">
+    <main className="flex min-h-screen items-center justify-center px-4">
+      <div className="w-full max-w-sm island-shell rounded-3xl p-8">
+        <h1 className="display-title text-2xl font-semibold">
           Les activités des enfants
         </h1>
         <p className="mt-2 text-sm text-gray-600">{message}</p>
         <Link
           to={linkTo}
-          className="mt-6 block w-full rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-blue-700"
+          className="mt-6 block w-full btn-lagoon px-4 py-2.5 text-center text-sm font-semibold"
         >
           {linkLabel}
         </Link>
@@ -313,10 +313,10 @@ function ActivitiesScreen({
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8">
+    <main className="min-h-screen px-4 py-8">
       <div className="mx-auto w-full max-w-lg space-y-6">
-        <div className="rounded-lg bg-white p-8 shadow">
-          <h1 className="text-xl font-semibold text-gray-900">
+        <div className="island-shell rounded-3xl p-8">
+          <h1 className="display-title text-2xl font-semibold">
             Les activités des enfants
           </h1>
 
@@ -394,7 +394,7 @@ function ActivitiesScreen({
                 setEditingId(null)
                 setAdding(true)
               }}
-              className="mt-6 w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="mt-6 w-full btn-lagoon px-4 py-2.5 text-sm font-semibold"
             >
               Ajouter une activité
             </button>
@@ -453,7 +453,7 @@ function ActivityRow({
               type="button"
               onClick={() => setConfirmingDelete(false)}
               disabled={deleting}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
+              className="btn-ghost px-3.5 py-1.5 text-sm"
             >
               Annuler
             </button>
@@ -471,7 +471,7 @@ function ActivityRow({
             <button
               type="button"
               onClick={onEdit}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
+              className="btn-ghost px-3.5 py-1.5 text-sm"
             >
               Modifier
             </button>
@@ -625,7 +625,7 @@ function ActivityForm({
           id={`${idPrefix}-child`}
           value={childId}
           onChange={(e) => setChildId(e.target.value)}
-          className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
         >
           {childrenList.map((child) => (
             <option key={child.id} value={child.id}>
@@ -649,7 +649,7 @@ function ActivityForm({
           placeholder="Par exemple : football, solfège…"
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
         />
       </div>
 
@@ -666,7 +666,7 @@ function ActivityForm({
           placeholder="Par exemple : hall omnisports de Waterloo"
           value={location}
           onChange={(e) => setLocation(e.target.value)}
-          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
         />
       </div>
 
@@ -681,7 +681,7 @@ function ActivityForm({
           id={`${idPrefix}-distance`}
           value={distanceBand}
           onChange={(e) => setDistanceBand(e.target.value as DistanceBand)}
-          className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
         >
           {DISTANCE_BANDS.map((band) => (
             <option key={band.value} value={band.value}>
@@ -763,7 +763,7 @@ function ActivityForm({
             required
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
           />
         </div>
       )}
@@ -783,7 +783,7 @@ function ActivityForm({
             required
             value={startTime}
             onChange={(e) => setStartTime(e.target.value)}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
           />
         </div>
         <div className="w-full">
@@ -800,7 +800,7 @@ function ActivityForm({
             required
             value={endTime}
             onChange={(e) => setEndTime(e.target.value)}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
           />
         </div>
       </div>
@@ -815,14 +815,14 @@ function ActivityForm({
         <button
           type="button"
           onClick={onCancel}
-          className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+          className="w-full btn-ghost px-4 py-2 text-sm"
         >
           Annuler
         </button>
         <button
           type="submit"
           disabled={submitting || label.trim() === ''}
-          className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full btn-lagoon px-4 py-2.5 text-sm font-semibold"
         >
           {submitting
             ? 'Enregistrement…'

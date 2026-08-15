@@ -227,8 +227,8 @@ function SemainePage() {
 
   if (loadError) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-        <div className="w-full max-w-sm rounded-lg bg-white p-8 shadow">
+      <main className="flex min-h-screen items-center justify-center px-4">
+        <div className="w-full max-w-sm island-shell rounded-3xl p-8">
           <p className="rounded-md bg-red-50 p-3 text-sm text-red-800">
             Une erreur est survenue : {loadError}
           </p>
@@ -238,7 +238,7 @@ function SemainePage() {
               setLoading(true)
               void load()
             }}
-            className="mt-4 w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+            className="mt-4 w-full btn-ghost px-4 py-2 text-sm"
           >
             Réessayer
           </button>
@@ -249,15 +249,15 @@ function SemainePage() {
 
   if (!householdId) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-        <div className="w-full max-w-sm rounded-lg bg-white p-8 shadow">
-          <h1 className="text-xl font-semibold text-gray-900">La semaine</h1>
+      <main className="flex min-h-screen items-center justify-center px-4">
+        <div className="w-full max-w-sm island-shell rounded-3xl p-8">
+          <h1 className="display-title text-2xl font-semibold">La semaine</h1>
           <p className="mt-2 text-sm text-gray-600">
             Vous devez d’abord créer ou rejoindre un foyer.
           </p>
           <Link
             to="/foyer"
-            className="mt-6 block w-full rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-blue-700"
+            className="mt-6 block w-full btn-lagoon px-4 py-2.5 text-center text-sm font-semibold"
           >
             Aller à mon foyer
           </Link>
@@ -424,24 +424,24 @@ function WeekScreen({
   })
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8">
+    <main className="min-h-screen px-4 py-8">
       <div className="mx-auto w-full max-w-5xl space-y-6">
-        <div className="rounded-lg bg-white p-6 shadow">
-          <h1 className="text-xl font-semibold text-gray-900">La semaine</h1>
+        <div className="island-shell rounded-3xl p-6">
+          <h1 className="display-title text-2xl font-semibold">La semaine</h1>
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={onPreviousWeek}
-                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                className="btn-ghost px-3.5 py-1.5 text-sm"
               >
                 ← Semaine précédente
               </button>
               <button
                 type="button"
                 onClick={onNextWeek}
-                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                className="btn-ghost px-3.5 py-1.5 text-sm"
               >
                 Semaine suivante →
               </button>
@@ -456,7 +456,7 @@ function WeekScreen({
                 value={horizonDays}
                 disabled={generating}
                 onChange={(e) => setHorizonDays(Number(e.target.value))}
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="field-lagoon px-3 py-2 text-sm"
               >
                 {HORIZONS.map((h) => (
                   <option key={h.days} value={h.days}>
@@ -468,7 +468,7 @@ function WeekScreen({
                 type="button"
                 onClick={() => void generateTrips()}
                 disabled={generating}
-                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="btn-lagoon px-4 py-2.5 text-sm font-semibold"
               >
                 {generating
                   ? generationProgress
@@ -508,7 +508,7 @@ function WeekScreen({
               <button
                 type="button"
                 onClick={onGoToNextTrip}
-                className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                className="btn-lagoon px-3.5 py-1.5 text-sm font-semibold"
               >
                 Afficher cette semaine-là
               </button>
@@ -527,7 +527,7 @@ function WeekScreen({
               </p>
               <Link
                 to="/activites"
-                className="mt-2 inline-block rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                className="mt-2 inline-block btn-lagoon px-3.5 py-1.5 text-sm font-semibold"
               >
                 Créer une activité
               </Link>
@@ -798,7 +798,7 @@ function TripDetail({
       aria-label="Détail du trajet"
     >
       <div
-        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl"
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto island-shell rounded-3xl p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3">
@@ -838,7 +838,7 @@ function TripDetail({
               value={driverId}
               disabled={saving}
               onChange={(e) => void saveDriver(e.target.value)}
-              className="mt-1 w-full max-w-xs rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 w-full max-w-xs field-lagoon px-3 py-2 text-sm"
             >
               <option value="">Personne pour le moment (à couvrir)</option>
               {members.map((member) => (
@@ -871,7 +871,7 @@ function TripDetail({
                 void setStatus(trip.driver_id ? 'couvert' : 'non_couvert')
               }
               disabled={saving}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+              className="btn-ghost px-3.5 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
             >
               Rétablir ce trajet
             </button>
@@ -884,7 +884,7 @@ function TripDetail({
                 type="button"
                 onClick={() => setConfirmingCancel(false)}
                 disabled={saving}
-                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                className="btn-ghost px-3.5 py-1.5 text-sm"
               >
                 Non
               </button>
@@ -1086,7 +1086,7 @@ function PublishSection({
             type="button"
             onClick={() => void unpublish()}
             disabled={submitting}
-            className="mt-2 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-2 btn-ghost px-3.5 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? 'Dépublication…' : 'Dépublier du hub'}
           </button>
@@ -1109,7 +1109,7 @@ function PublishSection({
               id={`publish-hub-${trip.id}`}
               value={hubId}
               onChange={(e) => setHubId(e.target.value)}
-              className="mt-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 field-lagoon px-3 py-2 text-sm"
             >
               {myHubs.map((hub) => (
                 <option key={hub.id} value={hub.id}>
@@ -1130,7 +1130,7 @@ function PublishSection({
                 id={`publish-mp-${trip.id}`}
                 value={meetingPointId}
                 onChange={(e) => setMeetingPointId(e.target.value)}
-                className="mt-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="mt-1 field-lagoon px-3 py-2 text-sm"
               >
                 <option value="">Aucun</option>
                 {meetingPoints.map((mp) => (
@@ -1156,14 +1156,14 @@ function PublishSection({
               max={8}
               value={seats}
               onChange={(e) => setSeats(e.target.value)}
-              className="mt-1 w-24 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 w-24 field-lagoon px-3 py-2 text-sm"
             />
           </div>
           <button
             type="button"
             onClick={() => void publish()}
             disabled={submitting}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="btn-lagoon px-4 py-2.5 text-sm font-semibold"
           >
             {submitting ? 'Publication…' : 'Publier'}
           </button>

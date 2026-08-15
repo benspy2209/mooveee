@@ -320,8 +320,8 @@ function HubsPage() {
 
   if (loadError) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-        <div className="w-full max-w-sm rounded-lg bg-white p-8 shadow">
+      <main className="flex min-h-screen items-center justify-center px-4">
+        <div className="w-full max-w-sm island-shell rounded-3xl p-8">
           <p className="rounded-md bg-red-50 p-3 text-sm text-red-800">
             Une erreur est survenue : {loadError}
           </p>
@@ -331,7 +331,7 @@ function HubsPage() {
               setLoading(true)
               void load()
             }}
-            className="mt-4 w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+            className="mt-4 w-full btn-ghost px-4 py-2 text-sm"
           >
             Réessayer
           </button>
@@ -342,16 +342,16 @@ function HubsPage() {
 
   if (!householdId || !userId) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-        <div className="w-full max-w-sm rounded-lg bg-white p-8 shadow">
-          <h1 className="text-xl font-semibold text-gray-900">Les hubs</h1>
+      <main className="flex min-h-screen items-center justify-center px-4">
+        <div className="w-full max-w-sm island-shell rounded-3xl p-8">
+          <h1 className="display-title text-2xl font-semibold">Les hubs</h1>
           <p className="mt-2 text-sm text-gray-600">
             Vous devez d’abord créer ou rejoindre un foyer avant de participer à
             un hub.
           </p>
           <Link
             to="/foyer"
-            className="mt-6 block w-full rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-blue-700"
+            className="mt-6 block w-full btn-lagoon px-4 py-2.5 text-center text-sm font-semibold"
           >
             Aller à mon foyer
           </Link>
@@ -369,10 +369,10 @@ function HubsPage() {
   )
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8">
+    <main className="min-h-screen px-4 py-8">
       <div className="mx-auto w-full max-w-lg space-y-6">
-        <div className="rounded-lg bg-white p-8 shadow">
-          <h1 className="text-xl font-semibold text-gray-900">Les hubs</h1>
+        <div className="island-shell rounded-3xl p-8">
+          <h1 className="display-title text-2xl font-semibold">Les hubs</h1>
 
           <p className="mt-2 text-sm text-gray-600">
             Un hub relie plusieurs familles autour d’une école, d’un club ou
@@ -520,7 +520,7 @@ function PactGate({
   }
 
   return (
-    <div className="rounded-lg bg-white p-8 shadow">
+    <div className="island-shell rounded-3xl p-8">
       <h2 className="text-lg font-semibold text-gray-900">
         Le Pacte de Hub — {hubName}
       </h2>
@@ -546,7 +546,7 @@ function PactGate({
         type="button"
         disabled={!accepted || submitting}
         onClick={() => void handleAccept()}
-        className="mt-4 w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+        className="mt-4 w-full btn-lagoon px-4 py-2.5 text-sm font-semibold"
       >
         {submitting ? 'Enregistrement…' : 'Accepter le pacte'}
       </button>
@@ -731,7 +731,7 @@ function HubDetail({
 
   if (loading) {
     return (
-      <div className="rounded-lg bg-white p-8 shadow">
+      <div className="island-shell rounded-3xl p-8">
         <p className="text-sm text-gray-500">Chargement du hub…</p>
       </div>
     )
@@ -739,7 +739,7 @@ function HubDetail({
 
   if (error || !hub) {
     return (
-      <div className="rounded-lg bg-white p-8 shadow">
+      <div className="island-shell rounded-3xl p-8">
         <p className="rounded-md bg-red-50 p-3 text-sm text-red-800">
           Une erreur est survenue : {error ?? 'hub introuvable'}
         </p>
@@ -810,7 +810,7 @@ function HubDetail({
   suggestions.sort(compareSuggestions)
 
   return (
-    <div className="rounded-lg bg-white p-8 shadow">
+    <div className="island-shell rounded-3xl p-8">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">{hub.name}</h2>
@@ -1082,7 +1082,7 @@ function HubTripCard({
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="shrink-0 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+            className="shrink-0 btn-lagoon px-3.5 py-1.5 text-sm font-semibold"
           >
             Demander une place
           </button>
@@ -1114,7 +1114,7 @@ function HubTripCard({
                 id={`request-child-${trip.id}`}
                 value={childId}
                 onChange={(e) => setChildId(e.target.value)}
-                className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
               >
                 {myChildren.map((child) => (
                   <option key={child.id} value={child.id}>
@@ -1135,14 +1135,14 @@ function HubTripCard({
                 rows={2}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
               />
             </div>
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                className="w-full btn-ghost px-4 py-2 text-sm"
               >
                 Annuler
               </button>
@@ -1150,7 +1150,7 @@ function HubTripCard({
                 type="button"
                 onClick={() => void request()}
                 disabled={submitting || !childId}
-                className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full btn-lagoon px-4 py-2.5 text-sm font-semibold"
               >
                 {submitting ? 'Envoi…' : 'Envoyer la demande'}
               </button>
@@ -1381,7 +1381,7 @@ function MeetingPointsSection({
         <button
           type="button"
           onClick={() => setAdding(true)}
-          className="mt-2 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
+          className="mt-2 btn-ghost px-3.5 py-1.5 text-sm"
         >
           Ajouter un point de rendez-vous
         </button>
@@ -1405,7 +1405,7 @@ function MeetingPointsSection({
               required
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
               placeholder="Parking de l’école, entrée rue des Tilleuls"
             />
           </div>
@@ -1421,7 +1421,7 @@ function MeetingPointsSection({
               rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
             />
           </div>
           <div>
@@ -1443,14 +1443,14 @@ function MeetingPointsSection({
             <button
               type="button"
               onClick={() => setAdding(false)}
-              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+              className="w-full btn-ghost px-4 py-2 text-sm"
             >
               Annuler
             </button>
             <button
               type="submit"
               disabled={submitting || label.trim() === ''}
-              className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full btn-lagoon px-4 py-2.5 text-sm font-semibold"
             >
               {submitting ? 'Enregistrement…' : 'Ajouter'}
             </button>
@@ -1537,7 +1537,7 @@ function PendingMemberRow({
             type="button"
             onClick={() => void validate()}
             disabled={submitting}
-            className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="btn-lagoon px-3.5 py-1.5 text-sm font-semibold"
           >
             Valider
           </button>
@@ -1647,7 +1647,7 @@ function JoinHubForm({
   }
 
   return (
-    <div className="rounded-lg bg-white p-8 shadow">
+    <div className="island-shell rounded-3xl p-8">
       <h2 className="text-lg font-semibold text-gray-900">Rejoindre un hub</h2>
 
       {message && (
@@ -1663,7 +1663,7 @@ function JoinHubForm({
             setOpen(true)
             setMessage(null)
           }}
-          className="mt-4 w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+          className="mt-4 w-full btn-ghost px-4 py-2 text-sm"
         >
           Saisir un code d’adhésion
         </button>
@@ -1682,7 +1682,7 @@ function JoinHubForm({
             <button
               type="submit"
               disabled={searching || code.trim().length < 6}
-              className="shrink-0 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="shrink-0 btn-lagoon px-4 py-2.5 text-sm font-semibold"
             >
               {searching ? 'Recherche…' : 'Chercher'}
             </button>
@@ -1726,7 +1726,7 @@ function JoinHubForm({
                     type="button"
                     disabled={!pactAccepted || submitting}
                     onClick={() => void join()}
-                    className="mt-4 w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="mt-4 w-full btn-lagoon px-4 py-2.5 text-sm font-semibold"
                   >
                     {submitting
                       ? 'Envoi de la demande…'
@@ -1839,14 +1839,14 @@ function CreateHubForm({
   }
 
   return (
-    <div className="rounded-lg bg-white p-8 shadow">
+    <div className="island-shell rounded-3xl p-8">
       <h2 className="text-lg font-semibold text-gray-900">Créer un hub</h2>
 
       {!open ? (
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="mt-4 w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+          className="mt-4 w-full btn-ghost px-4 py-2 text-sm"
         >
           Créer un nouveau hub
         </button>
@@ -1866,7 +1866,7 @@ function CreateHubForm({
               placeholder="Par exemple : École Saint-Joseph — primaires"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
             />
           </div>
 
@@ -1881,7 +1881,7 @@ function CreateHubForm({
               id="hub-kind"
               value={kind}
               onChange={(e) => setKind(e.target.value as HubKind)}
-              className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
             >
               {Object.entries(KIND_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>
@@ -1905,7 +1905,7 @@ function CreateHubForm({
               placeholder="Par exemple : rue de l’Église 12"
               value={placeLabel}
               onChange={(e) => setPlaceLabel(e.target.value)}
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
             />
           </div>
 
@@ -1923,7 +1923,7 @@ function CreateHubForm({
               placeholder="Par exemple : Waterloo"
               value={municipality}
               onChange={(e) => setMunicipality(e.target.value)}
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
             />
           </div>
 
@@ -1951,14 +1951,14 @@ function CreateHubForm({
                 setOpen(false)
                 setError(null)
               }}
-              className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+              className="w-full btn-ghost px-4 py-2 text-sm"
             >
               Annuler
             </button>
             <button
               type="submit"
               disabled={submitting || !pactAccepted || name.trim() === ''}
-              className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full btn-lagoon px-4 py-2.5 text-sm font-semibold"
             >
               {submitting ? 'Création…' : 'Créer le hub'}
             </button>

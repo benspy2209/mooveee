@@ -246,8 +246,8 @@ function DemandesPage() {
 
   if (loadError) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-        <div className="w-full max-w-sm rounded-lg bg-white p-8 shadow">
+      <main className="flex min-h-screen items-center justify-center px-4">
+        <div className="w-full max-w-sm island-shell rounded-3xl p-8">
           <p className="rounded-md bg-red-50 p-3 text-sm text-red-800">
             Une erreur est survenue : {loadError}
           </p>
@@ -257,7 +257,7 @@ function DemandesPage() {
               setLoading(true)
               void load()
             }}
-            className="mt-4 w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+            className="mt-4 w-full btn-ghost px-4 py-2 text-sm"
           >
             Réessayer
           </button>
@@ -268,15 +268,15 @@ function DemandesPage() {
 
   if (!householdId) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-        <div className="w-full max-w-sm rounded-lg bg-white p-8 shadow">
-          <h1 className="text-xl font-semibold text-gray-900">Les demandes</h1>
+      <main className="flex min-h-screen items-center justify-center px-4">
+        <div className="w-full max-w-sm island-shell rounded-3xl p-8">
+          <h1 className="display-title text-2xl font-semibold">Les demandes</h1>
           <p className="mt-2 text-sm text-gray-600">
             Vous devez d’abord créer ou rejoindre un foyer.
           </p>
           <Link
             to="/foyer"
-            className="mt-6 block w-full rounded-md bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-blue-700"
+            className="mt-6 block w-full btn-lagoon px-4 py-2.5 text-center text-sm font-semibold"
           >
             Aller à mon foyer
           </Link>
@@ -286,10 +286,10 @@ function DemandesPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8">
+    <main className="min-h-screen px-4 py-8">
       <div className="mx-auto w-full max-w-lg space-y-6">
-        <div className="rounded-lg bg-white p-8 shadow">
-          <h1 className="text-xl font-semibold text-gray-900">
+        <div className="island-shell rounded-3xl p-8">
+          <h1 className="display-title text-2xl font-semibold">
             Les demandes de place
           </h1>
 
@@ -500,7 +500,7 @@ function ReceivedRequestRow({
             type="button"
             onClick={() => void accept()}
             disabled={submitting}
-            className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="btn-lagoon px-3.5 py-1.5 text-sm font-semibold"
           >
             {submitting ? 'Traitement…' : 'Accepter'}
           </button>
