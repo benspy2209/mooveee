@@ -127,6 +127,7 @@ interface ActivityForGeneration {
   child_id: string
   label: string
   location_label: string | null
+  place_id: string | null
   distance_band: DistanceBand
   rrule: string | null
   starts_at: string | null
@@ -154,7 +155,7 @@ export async function generateTripsForHousehold(
     supabase
       .from('activities')
       .select(
-        'id, child_id, label, location_label, distance_band, rrule, starts_at, ends_at',
+        'id, child_id, label, location_label, place_id, distance_band, rrule, starts_at, ends_at',
       )
       .eq('household_id', householdId),
     supabase
@@ -186,6 +187,8 @@ export async function generateTripsForHousehold(
     scheduled_at: string
     origin_label: string
     destination_label: string
+    origin_place_id: string | null
+    destination_place_id: string | null
     distance_band: DistanceBand
   }
 
@@ -228,6 +231,11 @@ export async function generateTripsForHousehold(
         scheduled_at: iso,
         origin_label: occ.origin,
         destination_label: occ.destination,
+        // Lieu public normalisé de l'activité (0019). Le domicile n'a
+        // jamais de place_id : il reste le label « Domicile ».
+        origin_place_id: occ.direction === 'retour' ? activity.place_id : null,
+        destination_place_id:
+          occ.direction === 'aller' ? activity.place_id : null,
         distance_band: activity.distance_band,
       })
     }
@@ -359,6 +367,78 @@ export async function generateTripsForHousehold(
 
     if (bandError) {
       throw new Error(bandError.message)
+    }
+  }
+
+  // Propagation du lieu normalisé (0019) — même logique de rattrapage :
+  // chaque génération réaligne le place_id des trajets générés sur celui
+  // de leur activité (destination à l'aller, origine au retour).
+  for (const a of activities) {
+    if (!a.place_id) continue
+    const [allerResult, retourResult] = await Promise.all([
+      supabase
+        .from('trips')
+        .update({ destination_place_id: a.place_id })
+        .eq('activity_id', a.id)
+        .eq('direction', 'aller')
+        .is('destination_place_id', null),
+      supabase
+        .from('trips')
+        .update({ origin_place_id: a.place_id })
+        .eq('activity_id', a.id)
+        .eq('direction', 'retour')
+        .is('origin_place_id', null),
+    ])
+    const placeError = allerResult.error ?? retourResult.error
+    if (placeError) {
+      throw new Error(placeError.message)
+    }
+  }
+
+  // Appariement aller<->retour (0019, Doc v4 §4.1) : lien d'AFFICHAGE
+  // entre les deux sens d'une même occurrence (même activité, même jour
+  // Europe/Brussels). Aucune dépendance fonctionnelle. Idempotent : ne
+  // touche que les trajets encore non liés.
+  const { data: unlinked, error: unlinkedError } = await supabase
+    .from('trips')
+    .select('id, activity_id, direction, scheduled_at, linked_trip_id')
+    .eq('household_id', householdId)
+    .not('activity_id', 'is', null)
+    .is('linked_trip_id', null)
+
+  if (unlinkedError) {
+    throw new Error(unlinkedError.message)
+  }
+
+  const byOccurrence = new Map<string, { aller?: string; retour?: string }>()
+  for (const t of unlinked ?? []) {
+    const wall = toBrusselsWallClock(new Date(t.scheduled_at))
+    const key = `${t.activity_id}|${wall.y}-${wall.m}-${wall.d}`
+    const pair = byOccurrence.get(key) ?? {}
+    pair[t.direction as TripDirection] = t.id
+    byOccurrence.set(key, pair)
+  }
+
+  const linkUpdates: Array<{ id: string; linked: string }> = []
+  for (const pair of byOccurrence.values()) {
+    if (pair.aller && pair.retour) {
+      linkUpdates.push({ id: pair.aller, linked: pair.retour })
+      linkUpdates.push({ id: pair.retour, linked: pair.aller })
+    }
+  }
+  for (let i = 0; i < linkUpdates.length; i += 10) {
+    const chunk = linkUpdates.slice(i, i + 10)
+    const results = await Promise.all(
+      chunk.map((u) =>
+        supabase
+          .from('trips')
+          .update({ linked_trip_id: u.linked })
+          .eq('id', u.id),
+      ),
+    )
+    const linkError = results.find((r) => r.error)?.error
+    if (linkError) {
+      throw new Error(linkError.message)
     }
   }
 

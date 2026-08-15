@@ -3,6 +3,9 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { DEFAULT_HORIZON_DAYS, generateTripsForHousehold } from '@/lib/trips'
+import { PlaceField } from '@/components/PlaceField'
+
+import type { PlaceValue } from '@/components/PlaceField'
 
 import type { FormEvent } from 'react'
 import type { Database } from '@/types/database'
@@ -17,6 +20,7 @@ interface Activity {
   child_id: string
   label: string
   location_label: string | null
+  place_id: string | null
   distance_band: DistanceBand
   rrule: string | null
   starts_at: string | null
@@ -167,7 +171,7 @@ function ActivitesPage() {
       supabase
         .from('activities')
         .select(
-          'id, child_id, label, location_label, distance_band, rrule, starts_at, ends_at',
+          'id, child_id, label, location_label, place_id, distance_band, rrule, starts_at, ends_at',
         )
         .eq('household_id', membership.household_id)
         .order('created_at'),
@@ -519,7 +523,10 @@ function ActivityForm({
     activity?.child_id ?? childrenList[0].id,
   )
   const [label, setLabel] = useState(activity?.label ?? '')
-  const [location, setLocation] = useState(activity?.location_label ?? '')
+  const [place, setPlace] = useState<PlaceValue>({
+    placeId: activity?.place_id ?? null,
+    label: activity?.location_label ?? '',
+  })
   const [distanceBand, setDistanceBand] = useState<DistanceBand>(
     activity?.distance_band ?? 'courte',
   )
@@ -565,7 +572,8 @@ function ActivityForm({
     const values = {
       child_id: childId,
       label: label.trim(),
-      location_label: location.trim() === '' ? null : location.trim(),
+      location_label: place.label.trim() === '' ? null : place.label.trim(),
+      place_id: place.placeId,
       distance_band: distanceBand,
       rrule: weekly ? buildRrule(days) : null,
       starts_at: combine(anchorDate, startTime).toISOString(),
@@ -660,13 +668,12 @@ function ActivityForm({
         >
           Lieu (optionnel)
         </label>
-        <input
+        <PlaceField
           id={`${idPrefix}-location`}
-          type="text"
+          householdId={householdId}
+          value={place}
+          onChange={setPlace}
           placeholder="Par exemple : hall omnisports de Waterloo"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
         />
       </div>
 

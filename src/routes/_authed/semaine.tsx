@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import {
   BRUSSELS_TZ,
   DEFAULT_HORIZON_DAYS,
+  HOME_LABEL,
   HORIZONS,
   addDays,
   fromBrusselsWallClock,
@@ -13,7 +14,10 @@ import {
   toBrusselsWallClock,
   weekdayOf,
 } from '@/lib/trips'
+import { PlaceField } from '@/components/PlaceField'
 
+import type { FormEvent } from 'react'
+import type { PlaceValue } from '@/components/PlaceField'
 import type { WallClock } from '@/lib/trips'
 import type { Database } from '@/types/database'
 
@@ -44,6 +48,8 @@ interface Trip {
   seats_total: number | null
   seats_available: number | null
   meeting_point_id: string | null
+  linked_trip_id: string | null
+  has_children: boolean
   activities: { label: string } | null
   trip_children: Array<{ child_id: string }>
 }
@@ -168,7 +174,7 @@ function SemainePage() {
       supabase
         .from('trips')
         .select(
-          'id, activity_id, direction, status, driver_id, scheduled_at, origin_label, destination_label, hub_id, published_to_hub, seats_total, seats_available, meeting_point_id, activities(label), trip_children(child_id)',
+          'id, activity_id, direction, status, driver_id, scheduled_at, origin_label, destination_label, hub_id, published_to_hub, seats_total, seats_available, meeting_point_id, linked_trip_id, has_children, activities(label), trip_children(child_id)',
         )
         .eq('household_id', membership.household_id)
         .gte('scheduled_at', from)
@@ -354,6 +360,7 @@ function WeekScreen({
     null,
   )
   const [generationError, setGenerationError] = useState<string | null>(null)
+  const [showPassage, setShowPassage] = useState(false)
 
   const childIndex = new Map(childrenList.map((c, i) => [c.id, i]))
   const childName = new Map(childrenList.map((c) => [c.id, c.first_name]))
@@ -476,6 +483,15 @@ function WeekScreen({
                     : 'Génération…'
                   : 'Générer les trajets'}
               </button>
+              {myHubs.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowPassage(true)}
+                  className="btn-ghost px-4 py-2.5 text-sm"
+                >
+                  Je passe par là
+                </button>
+              )}
             </div>
           </div>
 
@@ -688,9 +704,251 @@ function WeekScreen({
               onClose={() => setSelectedTripId(null)}
             />
           )}
+
+          {showPassage && userId && (
+            <PassageModal
+              userId={userId}
+              householdId={householdId}
+              myHubs={myHubs}
+              onCreated={() => {
+                setShowPassage(false)
+                onChanged()
+              }}
+              onClose={() => setShowPassage(false)}
+            />
+          )}
         </div>
       </div>
     </main>
+  )
+}
+
+// « Je passe par là » (Doc v4 §4.1) : un parent signale un passage devant
+// un lieu du hub, sans enfant à bord (has_children = false). Le trajet
+// est publié couvert_ouvert : les autres familles peuvent demander une
+// place pour leurs enfants. Vocabulaire UI centré sur les enfants.
+function PassageModal({
+  userId,
+  householdId,
+  myHubs,
+  onCreated,
+  onClose,
+}: {
+  userId: string
+  householdId: string
+  myHubs: Array<HubOption>
+  onCreated: () => void
+  onClose: () => void
+}) {
+  const [hubId, setHubId] = useState(myHubs[0].id)
+  const [place, setPlace] = useState<PlaceValue>({ placeId: null, label: '' })
+  const [direction, setDirection] = useState<TripDirection>('aller')
+  const [date, setDate] = useState('')
+  const [time, setTime] = useState('')
+  const [seats, setSeats] = useState(1)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError(null)
+
+    if (place.label.trim() === '') {
+      setError('Indiquez le lieu devant lequel vous passez.')
+      return
+    }
+
+    const [y, m, d] = date.split('-').map(Number)
+    const [hh, mm] = time.split(':').map(Number)
+    const scheduledAt = fromBrusselsWallClock({ y, m, d, hh, mm })
+    if (scheduledAt.getTime() <= Date.now()) {
+      setError('Choisissez un moment à venir.')
+      return
+    }
+
+    const placeLabel = place.label.trim()
+    setSubmitting(true)
+    const { error: insertError } = await supabase.from('trips').insert({
+      household_id: householdId,
+      activity_id: null,
+      hub_id: hubId,
+      direction,
+      status: 'couvert_ouvert',
+      driver_id: userId,
+      scheduled_at: scheduledAt.toISOString(),
+      origin_label: direction === 'aller' ? HOME_LABEL : placeLabel,
+      destination_label: direction === 'aller' ? placeLabel : HOME_LABEL,
+      origin_place_id: direction === 'retour' ? place.placeId : null,
+      destination_place_id: direction === 'aller' ? place.placeId : null,
+      has_children: false,
+      published_to_hub: true,
+      seats_total: seats,
+      seats_available: seats,
+    })
+    setSubmitting(false)
+
+    if (insertError) {
+      setError(insertError.message)
+      return
+    }
+    onCreated()
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Signaler un passage"
+    >
+      <div
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto island-shell rounded-3xl p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="text-sm font-medium text-gray-900">Je passe par là</p>
+        <p className="mt-1 text-sm text-gray-600">
+          Vous passez devant un lieu du hub ? Proposez des places : des
+          enfants d'autres familles peuvent en profiter.
+        </p>
+
+        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+          <div>
+            <label
+              htmlFor="passage-hub"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Hub
+            </label>
+            <select
+              id="passage-hub"
+              value={hubId}
+              onChange={(e) => setHubId(e.target.value)}
+              className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
+            >
+              {myHubs.map((hub) => (
+                <option key={hub.id} value={hub.id}>
+                  {hub.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label
+              htmlFor="passage-place"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Lieu
+            </label>
+            <PlaceField
+              id="passage-place"
+              householdId={householdId}
+              value={place}
+              onChange={setPlace}
+              placeholder="Par exemple : école communale d'Alsemberg"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="passage-direction"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Sens du passage
+            </label>
+            <select
+              id="passage-direction"
+              value={direction}
+              onChange={(e) => setDirection(e.target.value as TripDirection)}
+              className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
+            >
+              <option value="aller">Vers le lieu (aller)</option>
+              <option value="retour">Depuis le lieu (retour)</option>
+            </select>
+          </div>
+
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label
+                htmlFor="passage-date"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Date
+              </label>
+              <input
+                id="passage-date"
+                type="date"
+                required
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="flex-1">
+              <label
+                htmlFor="passage-time"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Heure
+              </label>
+              <input
+                id="passage-time"
+                type="time"
+                required
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label
+              htmlFor="passage-seats"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Places offertes aux autres familles
+            </label>
+            <select
+              id="passage-seats"
+              value={seats}
+              onChange={(e) => setSeats(Number(e.target.value))}
+              className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
+            >
+              {[1, 2, 3, 4].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {error && (
+            <p className="rounded-md bg-red-50 p-3 text-sm text-red-800">
+              Une erreur est survenue : {error}
+            </p>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 btn-ghost px-4 py-2 text-sm"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex-1 btn-lagoon px-4 py-2.5 text-sm font-semibold"
+            >
+              {submitting ? 'Publication…' : 'Publier au hub'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }
 
@@ -812,6 +1070,12 @@ function TripDetail({
               {dateLabel} à {formatTime(wall)}
               {childName && ` · ${childName}`}
             </p>
+            {trip.linked_trip_id && (
+              <p className="mt-1 text-xs" style={{ color: 'var(--lagoon-deep)' }}>
+                Aller-retour lié — l'autre sens existe dans la semaine, il
+                se couvre indépendamment.
+              </p>
+            )}
             <p className="text-sm text-gray-500">
               {trip.origin_label} → {trip.destination_label}
             </p>
