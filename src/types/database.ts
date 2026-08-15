@@ -27,6 +27,7 @@ export type Database = {
           lat: number | null
           lng: number | null
           location_label: string | null
+          place_id: string | null
           rrule: string | null
           starts_at: string | null
         }
@@ -42,6 +43,7 @@ export type Database = {
           lat?: number | null
           lng?: number | null
           location_label?: string | null
+          place_id?: string | null
           rrule?: string | null
           starts_at?: string | null
         }
@@ -57,6 +59,7 @@ export type Database = {
           lat?: number | null
           lng?: number | null
           location_label?: string | null
+          place_id?: string | null
           rrule?: string | null
           starts_at?: string | null
         }
@@ -80,6 +83,13 @@ export type Database = {
             columns: ["hub_id"]
             isOneToOne: false
             referencedRelation: "hubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: false
+            referencedRelation: "places"
             referencedColumns: ["id"]
           },
         ]
@@ -329,6 +339,45 @@ export type Database = {
           },
         ]
       }
+      household_places: {
+        Row: {
+          created_at: string
+          custom_label: string | null
+          household_id: string
+          id: string
+          place_id: string
+        }
+        Insert: {
+          created_at?: string
+          custom_label?: string | null
+          household_id: string
+          id?: string
+          place_id: string
+        }
+        Update: {
+          created_at?: string
+          custom_label?: string | null
+          household_id?: string
+          id?: string
+          place_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "household_places_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "household_places_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: false
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       households: {
         Row: {
           created_at: string
@@ -493,6 +542,48 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hub_relations: {
+        Row: {
+          activation_status: string
+          created_at: string
+          hub_a_id: string
+          hub_b_id: string
+          id: string
+          relation_type: string
+        }
+        Insert: {
+          activation_status?: string
+          created_at?: string
+          hub_a_id: string
+          hub_b_id: string
+          id?: string
+          relation_type: string
+        }
+        Update: {
+          activation_status?: string
+          created_at?: string
+          hub_a_id?: string
+          hub_b_id?: string
+          id?: string
+          relation_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hub_relations_hub_a_id_fkey"
+            columns: ["hub_a_id"]
+            isOneToOne: false
+            referencedRelation: "hubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hub_relations_hub_b_id_fkey"
+            columns: ["hub_b_id"]
+            isOneToOne: false
+            referencedRelation: "hubs"
             referencedColumns: ["id"]
           },
         ]
@@ -924,6 +1015,174 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          channel: string | null
+          max_per_day: number | null
+          max_per_week: number | null
+          quiet_hours_end: string | null
+          quiet_hours_start: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channel?: string | null
+          max_per_day?: number | null
+          max_per_week?: number | null
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          channel?: string | null
+          max_per_day?: number | null
+          max_per_week?: number | null
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opportunity_matches: {
+        Row: {
+          detected_at: string
+          driver_user_id: string
+          hub_id: string | null
+          id: string
+          request_trip_id: string
+          status: string
+          trip_id: string
+          updated_at: string | null
+          via_hub_relation_id: string | null
+        }
+        Insert: {
+          detected_at?: string
+          driver_user_id: string
+          hub_id?: string | null
+          id?: string
+          request_trip_id: string
+          status?: string
+          trip_id: string
+          updated_at?: string | null
+          via_hub_relation_id?: string | null
+        }
+        Update: {
+          detected_at?: string
+          driver_user_id?: string
+          hub_id?: string | null
+          id?: string
+          request_trip_id?: string
+          status?: string
+          trip_id?: string
+          updated_at?: string | null
+          via_hub_relation_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_matches_driver_user_id_fkey"
+            columns: ["driver_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_matches_hub_id_fkey"
+            columns: ["hub_id"]
+            isOneToOne: false
+            referencedRelation: "hubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_matches_request_trip_id_fkey"
+            columns: ["request_trip_id"]
+            isOneToOne: false
+            referencedRelation: "hub_trips_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_matches_request_trip_id_fkey"
+            columns: ["request_trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_matches_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "hub_trips_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_matches_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_matches_via_hub_relation_id_fkey"
+            columns: ["via_hub_relation_id"]
+            isOneToOne: false
+            referencedRelation: "hub_relations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      places: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          external_place_id: string | null
+          id: string
+          label: string
+          lat: number | null
+          lng: number | null
+          municipality: string | null
+          postal_code: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          external_place_id?: string | null
+          id?: string
+          label: string
+          lat?: number | null
+          lng?: number | null
+          municipality?: string | null
+          postal_code?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          external_place_id?: string | null
+          id?: string
+          label?: string
+          lat?: number | null
+          lng?: number | null
+          municipality?: string | null
+          postal_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "places_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reports: {
         Row: {
           body: string
@@ -1223,17 +1482,21 @@ export type Database = {
           destination_label: string | null
           destination_lat: number | null
           destination_lng: number | null
+          destination_place_id: string | null
           direction: Database["public"]["Enums"]["trip_direction"]
           distance_band: Database["public"]["Enums"]["distance_band"] | null
           distance_km: number | null
           driver_id: string | null
+          has_children: boolean
           household_id: string
           hub_id: string | null
           id: string
+          linked_trip_id: string | null
           meeting_point_id: string | null
           origin_label: string | null
           origin_lat: number | null
           origin_lng: number | null
+          origin_place_id: string | null
           private_note: string | null
           published_to_hub: boolean
           scheduled_at: string
@@ -1248,17 +1511,21 @@ export type Database = {
           destination_label?: string | null
           destination_lat?: number | null
           destination_lng?: number | null
+          destination_place_id?: string | null
           direction: Database["public"]["Enums"]["trip_direction"]
           distance_band?: Database["public"]["Enums"]["distance_band"] | null
           distance_km?: number | null
           driver_id?: string | null
+          has_children?: boolean
           household_id: string
           hub_id?: string | null
           id?: string
+          linked_trip_id?: string | null
           meeting_point_id?: string | null
           origin_label?: string | null
           origin_lat?: number | null
           origin_lng?: number | null
+          origin_place_id?: string | null
           private_note?: string | null
           published_to_hub?: boolean
           scheduled_at: string
@@ -1273,17 +1540,21 @@ export type Database = {
           destination_label?: string | null
           destination_lat?: number | null
           destination_lng?: number | null
+          destination_place_id?: string | null
           direction?: Database["public"]["Enums"]["trip_direction"]
           distance_band?: Database["public"]["Enums"]["distance_band"] | null
           distance_km?: number | null
           driver_id?: string | null
+          has_children?: boolean
           household_id?: string
           hub_id?: string | null
           id?: string
+          linked_trip_id?: string | null
           meeting_point_id?: string | null
           origin_label?: string | null
           origin_lat?: number | null
           origin_lng?: number | null
+          origin_place_id?: string | null
           private_note?: string | null
           published_to_hub?: boolean
           scheduled_at?: string
@@ -1298,6 +1569,13 @@ export type Database = {
             columns: ["activity_id"]
             isOneToOne: false
             referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trips_destination_place_id_fkey"
+            columns: ["destination_place_id"]
+            isOneToOne: false
+            referencedRelation: "places"
             referencedColumns: ["id"]
           },
           {
@@ -1322,10 +1600,31 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "trips_linked_trip_id_fkey"
+            columns: ["linked_trip_id"]
+            isOneToOne: false
+            referencedRelation: "hub_trips_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trips_linked_trip_id_fkey"
+            columns: ["linked_trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "trips_meeting_point_id_fkey"
             columns: ["meeting_point_id"]
             isOneToOne: false
             referencedRelation: "meeting_points"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trips_origin_place_id_fkey"
+            columns: ["origin_place_id"]
+            isOneToOne: false
+            referencedRelation: "places"
             referencedColumns: ["id"]
           },
         ]
@@ -1423,6 +1722,7 @@ export type Database = {
         Row: {
           children_count: number | null
           destination_label: string | null
+          destination_place_id: string | null
           direction: Database["public"]["Enums"]["trip_direction"] | null
           driver_first_name: string | null
           driver_id: string | null
@@ -1437,6 +1737,7 @@ export type Database = {
         Insert: {
           children_count?: never
           destination_label?: string | null
+          destination_place_id?: string | null
           direction?: Database["public"]["Enums"]["trip_direction"] | null
           driver_first_name?: never
           driver_id?: string | null
@@ -1451,6 +1752,7 @@ export type Database = {
         Update: {
           children_count?: never
           destination_label?: string | null
+          destination_place_id?: string | null
           direction?: Database["public"]["Enums"]["trip_direction"] | null
           driver_first_name?: never
           driver_id?: string | null
@@ -1463,6 +1765,13 @@ export type Database = {
           status?: Database["public"]["Enums"]["trip_status"] | null
         }
         Relationships: [
+          {
+            foreignKeyName: "trips_destination_place_id_fkey"
+            columns: ["destination_place_id"]
+            isOneToOne: false
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "trips_driver_id_fkey"
             columns: ["driver_id"]
@@ -1499,6 +1808,7 @@ export type Database = {
         Args: { p_child: string; p_household: string }
         Returns: boolean
       }
+      detect_opportunities: { Args: never; Returns: number }
       hub_for_join_code: {
         Args: { p_code: string }
         Returns: {
