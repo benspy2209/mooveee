@@ -338,6 +338,115 @@ a:where(.block.rounded-md):active {
   animation: rise-in 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .rise-in {
+    animation: rise-in 400ms ease both;
+    animation-name: fade-in-only;
+  }
+  @keyframes fade-in-only {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+/* ——— Shell applicatif : chrome translucide, le contenu défile dessous ——— */
+
+.app-header {
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in oklab, var(--header-bg) 88%, transparent 12%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.app-wordmark {
+  font-family: 'Fraunces', Georgia, serif;
+  font-weight: 700;
+  color: var(--sea-ink);
+  letter-spacing: -0.01em;
+}
+
+.app-wordmark em {
+  font-style: italic;
+  color: var(--lagoon-deep);
+}
+
+.app-tabbar {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 40;
+  border-top: 1px solid var(--line);
+  background: color-mix(in oklab, var(--header-bg) 90%, transparent 10%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Réserve la hauteur de la barre : le contenu des écrans reste atteignable. */
+.with-tabbar main {
+  padding-bottom: calc(92px + env(safe-area-inset-bottom));
+}
+
+.tab-item {
+  color: var(--sea-ink-soft);
+  -webkit-tap-highlight-color: transparent;
+  transition: color 180ms ease;
+}
+
+.tab-item .tab-glyph {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 4px 14px;
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+
+.tab-item.is-active {
+  color: var(--lagoon-deep);
+}
+
+.tab-item.is-active .tab-glyph {
+  background: var(--chip-bg);
+  border-color: var(--chip-line);
+}
+
+.btn-lagoon {
+  color: #fff;
+  background: linear-gradient(150deg, var(--lagoon) 0%, var(--lagoon-deep) 100%);
+  border-radius: 999px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.35) inset,
+    0 10px 22px rgba(50, 143, 151, 0.32);
+}
+
+.btn-lagoon:hover {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.35) inset,
+    0 12px 26px rgba(50, 143, 151, 0.42);
+}
+
+.btn-lagoon:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.field-lagoon {
+  border: 1px solid var(--line);
+  background: var(--surface-strong);
+  border-radius: 14px;
+  color: var(--sea-ink);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.field-lagoon:focus {
+  outline: none;
+  border-color: var(--lagoon-deep);
+  box-shadow: 0 0 0 3px rgba(79, 184, 178, 0.25);
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;

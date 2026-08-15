@@ -56,13 +56,16 @@ function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm rounded-lg bg-white p-8 shadow">
-        <h1 className="text-xl font-semibold text-gray-900">Connexion</h1>
+    <main className="flex min-h-screen items-center justify-center px-4">
+      <div className="island-shell rise-in w-full max-w-sm rounded-3xl p-8">
+        <p className="island-kicker">Trajets partagés entre familles</p>
+        <h1 className="app-wordmark mt-1 text-4xl">
+          Moov<em>eee</em>
+        </h1>
 
         {mode === 'code' ? (
           <>
-            <p className="mt-2 text-sm text-gray-600">
+            <p className="mt-4 text-sm" style={{ color: 'var(--sea-ink-soft)' }}>
               Entrez votre code d'accès.
             </p>
             <AccessCodeLogin />
@@ -76,7 +79,7 @@ function LoginPage() {
           </>
         ) : (
           <>
-            <p className="mt-2 text-sm text-gray-600">
+            <p className="mt-4 text-sm" style={{ color: 'var(--sea-ink-soft)' }}>
               Recevez un code de connexion par email. Aucun mot de passe
               requis.
             </p>
@@ -160,7 +163,7 @@ function EmailOtpLogin({
                   maxLength={6}
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-center text-lg tracking-[0.4em] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="field-lagoon mt-1 w-full px-3 py-3 text-center text-lg tracking-[0.4em]"
                   placeholder="000000"
                 />
               </div>
@@ -174,7 +177,7 @@ function EmailOtpLogin({
               <button
                 type="submit"
                 disabled={verifying || code.trim().length < 6}
-                className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="btn-lagoon w-full px-4 py-2.5 text-sm font-semibold"
               >
                 {verifying ? 'Vérification…' : 'Se connecter'}
               </button>
@@ -204,7 +207,7 @@ function EmailOtpLogin({
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="field-lagoon mt-1 w-full px-3 py-3 text-sm"
                 placeholder="vous@exemple.be"
               />
             </div>
@@ -218,7 +221,7 @@ function EmailOtpLogin({
             <button
               type="submit"
               disabled={status === 'sending'}
-              className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="btn-lagoon w-full px-4 py-2.5 text-sm font-semibold"
             >
               {status === 'sending'
                 ? 'Envoi en cours…'
@@ -298,7 +301,7 @@ function AccessCodeLogin() {
           spellCheck={false}
           value={accessCode}
           onChange={(e) => setAccessCode(e.target.value)}
-          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-center text-base tracking-wide focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="field-lagoon mt-1 w-full px-3 py-3 text-center text-base tracking-wide"
           placeholder="ex. ben-12345678"
         />
       </div>
@@ -310,7 +313,7 @@ function AccessCodeLogin() {
       <button
         type="submit"
         disabled={submitting}
-        className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+        className="btn-lagoon w-full px-4 py-2.5 text-sm font-semibold"
       >
         {submitting ? 'Connexion en cours…' : 'Se connecter'}
       </button>

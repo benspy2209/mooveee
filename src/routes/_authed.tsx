@@ -6,6 +6,13 @@ import {
   createFileRoute,
   useLocation,
 } from '@tanstack/react-router'
+import {
+  CalendarDays,
+  HeartHandshake,
+  House,
+  Inbox,
+  UsersRound,
+} from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { fetchPendingDropoffReminders } from '@/lib/dropoff-reminders'
@@ -18,14 +25,14 @@ export const Route = createFileRoute('/_authed')({
   component: AuthedLayout,
 })
 
-const NAV_ITEMS = [
-  { to: '/foyer', label: 'Mon foyer' },
-  { to: '/enfants', label: 'Les enfants' },
-  { to: '/activites', label: 'Les activités' },
-  { to: '/semaine', label: 'La semaine' },
-  { to: '/hubs', label: 'Les hubs' },
-  { to: '/demandes', label: 'Les demandes' },
-  { to: '/equilibre', label: 'Mon équilibre' },
+// Enfants et Activités se rejoignent depuis Mon foyer : la barre reste
+// à cinq entrées, le standard mobile.
+const TAB_ITEMS = [
+  { to: '/semaine', label: 'Semaine', icon: CalendarDays },
+  { to: '/demandes', label: 'Demandes', icon: Inbox },
+  { to: '/hubs', label: 'Hubs', icon: UsersRound },
+  { to: '/equilibre', label: 'Équilibre', icon: HeartHandshake },
+  { to: '/foyer', label: 'Foyer', icon: House },
 ] as const
 
 function AuthedLayout() {
@@ -49,125 +56,57 @@ function AuthedLayout() {
   }
 
   return (
-    <>
-      <AppHeader pathname={pathname} />
+    <div className="with-tabbar">
+      <AppHeader />
       <DropoffReminderBanner userId={session.user.id} />
       <TripReminderBanner userId={session.user.id} />
       <Outlet />
-    </>
+      <AppTabBar pathname={pathname} />
+    </div>
   )
 }
 
-// Navigation principale : un hamburger accessible partout, pensé
-// mobile d'abord (encapsulage iOS prévu) — zones de clic confortables,
-// aucune interaction au survol seul.
-function AppHeader({ pathname }: { pathname: string }) {
-  const { signOut } = useAuth()
-  const [open, setOpen] = useState(false)
-
-  useEffect(() => {
-    if (!open) return
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') setOpen(false)
-    }
-    window.addEventListener('keydown', onKeyDown)
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      window.removeEventListener('keydown', onKeyDown)
-      document.body.style.overflow = previousOverflow
-    }
-  }, [open])
-
+// Chrome translucide : header en verre, le contenu défile dessous.
+function AppHeader() {
   return (
-    <header className="sticky top-0 z-40 border-b border-gray-200 bg-white">
-      <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-2">
-        <span className="text-base font-semibold text-gray-900">Mooveee</span>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          aria-label="Ouvrir le menu"
-          aria-expanded={open}
-          className="-mr-2 rounded-md p-3 text-gray-700 hover:bg-gray-100"
-        >
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            aria-hidden="true"
-          >
-            <line x1="4" y1="6" x2="20" y2="6" />
-            <line x1="4" y1="12" x2="20" y2="12" />
-            <line x1="4" y1="18" x2="20" y2="18" />
-          </svg>
-        </button>
+    <header className="app-header sticky top-0 z-40">
+      <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
+        <span className="app-wordmark text-lg">
+          Moov<em>eee</em>
+        </span>
       </div>
-
-      {open && (
-        <div
-          className="fixed inset-0 z-50 bg-black/30"
-          onClick={() => setOpen(false)}
-          role="presentation"
-        >
-          <nav
-            aria-label="Navigation principale"
-            className="ml-auto flex h-full w-72 max-w-[85vw] flex-col bg-white shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-              <span className="text-base font-semibold text-gray-900">
-                Menu
-              </span>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                aria-label="Fermer le menu"
-                className="-mr-2 rounded-md p-3 text-gray-500 hover:bg-gray-100"
-              >
-                ✕
-              </button>
-            </div>
-            <ul className="flex-1 overflow-y-auto py-2">
-              {NAV_ITEMS.map((item) => {
-                const active = pathname === item.to
-                return (
-                  <li key={item.to}>
-                    <Link
-                      to={item.to}
-                      onClick={() => setOpen(false)}
-                      aria-current={active ? 'page' : undefined}
-                      className={`block px-5 py-3.5 text-base ${
-                        active
-                          ? 'border-l-4 border-blue-600 bg-blue-50 font-semibold text-blue-700'
-                          : 'text-gray-800 hover:bg-gray-50'
-                      }`}
-                    >
-                      {item.label}
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
-            <div className="border-t border-gray-100 p-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen(false)
-                  void signOut()
-                }}
-                className="w-full rounded-md border border-gray-300 px-4 py-3 text-base font-medium text-gray-700 hover:bg-gray-100"
-              >
-                Se déconnecter
-              </button>
-            </div>
-          </nav>
-        </div>
-      )}
     </header>
+  )
+}
+
+// Navigation principale : barre d'onglets fixe en bas, pensée pouce
+// (encapsulage iOS prévu, safe-area gérée en CSS).
+function AppTabBar({ pathname }: { pathname: string }) {
+  return (
+    <nav aria-label="Navigation principale" className="app-tabbar">
+      <ul className="mx-auto grid w-full max-w-md grid-cols-5">
+        {TAB_ITEMS.map((item) => {
+          const active = pathname === item.to
+          const Icon = item.icon
+          return (
+            <li key={item.to}>
+              <Link
+                to={item.to}
+                aria-current={active ? 'page' : undefined}
+                className={`tab-item flex flex-col items-center gap-0.5 pt-2 pb-2.5 text-[11px] font-semibold ${
+                  active ? 'is-active' : ''
+                }`}
+              >
+                <span className="tab-glyph">
+                  <Icon size={21} strokeWidth={active ? 2.4 : 1.9} aria-hidden />
+                </span>
+                {item.label}
+              </Link>
+            </li>
+          )
+        })}
+      </ul>
+    </nav>
   )
 }
 
