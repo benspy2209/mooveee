@@ -296,6 +296,11 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   set-dev-password et VÉRIFIÉS (session OK ×3) : debruijneb@gmail.com,
   swauquaire@gmail.com, mooveee.app@proton.me (codes transmis à Ben en
   session, pas écrits ici). Provisoire jusqu'au SMTP branché.
+  Puis (Ben) : champ email SUPPRIMÉ, un seul champ code (commit
+  2f22bb1, déployé) — préfixe du code (ben/steph/mooveee) → email via
+  CODE_EMAILS dans le bundle (emails exposés, codes jamais), code
+  complet = mot de passe (suffixe hex 8). Codes regénérés via
+  set-dev-password et vérifiés OK ×3.
 
 ## Next step exact
 0. Ben : SUPABASE_SERVICE_ROLE_KEY dans .env.local (dashboard →
