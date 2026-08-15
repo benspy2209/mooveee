@@ -12,10 +12,12 @@ export const Route = createFileRoute('/login')({
 type Status = 'idle' | 'sending' | 'sent'
 
 function LoginPage() {
-  const { signInWithEmail, session, loading } = useAuth()
+  const { signInWithEmail, verifyEmailOtp, session, loading } = useAuth()
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<Status>('idle')
   const [error, setError] = useState<string | null>(null)
+  const [code, setCode] = useState('')
+  const [verifying, setVerifying] = useState(false)
 
   // Déjà connecté (magic link validé, connexion dev réussie…) : la page
   // de connexion n'a plus de raison d'être, direction le foyer.
@@ -37,20 +39,85 @@ function LoginPage() {
     setStatus('sent')
   }
 
+  async function handleVerifyCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError(null)
+    setVerifying(true)
+
+    const result = await verifyEmailOtp(email, code.trim())
+    setVerifying(false)
+    if (result.error) {
+      setError(result.error)
+    }
+    // Succès : la session arrive par onAuthStateChange et le
+    // <Navigate to="/foyer" /> ci-dessus prend le relais.
+  }
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm rounded-lg bg-white p-8 shadow">
         <h1 className="text-xl font-semibold text-gray-900">Connexion</h1>
         <p className="mt-2 text-sm text-gray-600">
-          Recevez un lien de connexion par email. Aucun mot de passe requis.
+          Recevez un code de connexion par email. Aucun mot de passe requis.
         </p>
 
         {status === 'sent' ? (
-          <p className="mt-6 rounded-md bg-green-50 p-4 text-sm text-green-800">
-            Un lien de connexion vous a été envoyé à{' '}
-            <span className="font-medium">{email}</span>. Vérifiez votre boîte
-            de réception.
-          </p>
+          <div className="mt-6">
+            <p className="rounded-md bg-green-50 p-4 text-sm text-green-800">
+              Un email a été envoyé à{' '}
+              <span className="font-medium">{email}</span>. Saisissez le code
+              reçu, ou cliquez sur le lien dans l'email.
+            </p>
+            <form onSubmit={handleVerifyCode} className="mt-4 space-y-4">
+              <div>
+                <label
+                  htmlFor="otp-code"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Code de connexion
+                </label>
+                <input
+                  id="otp-code"
+                  type="text"
+                  required
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-center text-lg tracking-[0.4em] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="000000"
+                />
+              </div>
+
+              {error && (
+                <p className="rounded-md bg-red-50 p-3 text-sm text-red-800">
+                  Une erreur est survenue : {error}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={verifying || code.trim().length < 6}
+                className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {verifying ? 'Vérification…' : 'Se connecter'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setStatus('idle')
+                  setCode('')
+                  setError(null)
+                }}
+                className="w-full text-center text-sm text-gray-500 hover:text-gray-700"
+              >
+                Changer d'adresse ou renvoyer un email
+              </button>
+            </form>
+          </div>
         ) : (
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>

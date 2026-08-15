@@ -20,6 +20,10 @@ interface AuthContextValue {
   profile: UserProfile | null
   profileLoading: boolean
   signInWithEmail: (email: string) => Promise<{ error: string | null }>
+  verifyEmailOtp: (
+    email: string,
+    token: string,
+  ) => Promise<{ error: string | null }>
   createProfile: (
     firstName: string,
     lastName?: string,
@@ -92,6 +96,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null }
   }, [])
 
+  // Le même envoi signInWithOtp produit un lien ET un code à 6 chiffres
+  // (si le template email Supabase inclut {{ .Token }}) : ici on valide
+  // le code, la session arrive ensuite par onAuthStateChange.
+  const verifyEmailOtp = useCallback(async (email: string, token: string) => {
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: 'email',
+    })
+    return { error: error?.message ?? null }
+  }, [])
+
   const createProfile = useCallback(
     async (firstName: string, lastName?: string) => {
       if (!userId) {
@@ -128,6 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile,
         profileLoading,
         signInWithEmail,
+        verifyEmailOtp,
         createProfile,
         signOut,
       }}
