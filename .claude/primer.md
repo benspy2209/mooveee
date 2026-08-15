@@ -283,6 +283,13 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   swipe changement de semaine, unification visuelle landing lagoon
   vs app gray/blue (rise-in et tw-animate-css inutilisés).
 
+- 15/08 : connexion par code OTP 6 chiffres (commit 342145e, déployé) —
+  verifyEmailOtp dans auth.tsx (verifyOtp type email), écran login :
+  après envoi, champ code (one-time-code, pattern 6 chiffres) + le lien
+  reste valide + bouton retour/renvoi. ACTION BEN : ajouter
+  {{ .Token }} au template email Supabase (Authentication → Emails →
+  Magic Link), sinon l'email ne contient que le lien.
+
 ## Next step exact
 0. Ben : SUPABASE_SERVICE_ROLE_KEY dans .env.local (dashboard →
    Project Settings → API → service_role), puis
