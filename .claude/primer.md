@@ -314,10 +314,22 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   .field-lagoon, bouton .btn-lagoon dégradé), title « Mooveee »,
   reduced-motion sur .rise-in. Enfants/Activités accessibles via
   Foyer (liens existants) ; déconnexion déjà sur Foyer.
-  ÉTAPE 2 À FAIRE : passe écran par écran (8 écrans encore en
-  gray/blue Tailwind) — semaine façon BlaBlaCar (timeline), cartes
-  island-shell, purge des liens redondants de Foyer (doublons tab
-  bar), boutons bg-blue-600 → btn-lagoon partout.
+  ÉTAPE 2 FAITE (commit e897d81, déployé, vérifié Chrome sur foyer/
+  semaine/hubs/équilibre) : retour Ben « tristounet » sur Foyer →
+  passe mécanique 142 remplacements sur les 8 écrans (cartes →
+  island-shell rounded-3xl, fonds gray-50 → gradient lagon du body,
+  bg-blue-600 → btn-lagoon, outline → btn-ghost, inputs →
+  field-lagoon, titres → display-title Fraunces, liens bleus →
+  couleur ancre globale) + nouvelles classes .btn-ghost/.avatar-dot
+  (3 teintes)/.rise-in.d-1..3 (cascade). Foyer refait à la main :
+  kicker + prénom Fraunces 3xl, membres en lignes avatar + pastille
+  rôle, invitations intégrées à la liste, 4 liens doublons tab bar
+  SUPPRIMÉS, Enfants/Activités en 2 cartes actions (Baby/
+  CalendarHeart), déconnexion en lien texte. Piège corrigé : le
+  replace « …p-6 shadow » avait mangé « shadow-xl » de la modale
+  semaine (p-6-xl). Reste étape 3 (non lancée) : timeline BlaBlaCar
+  sur /semaine + détails par écran (chips Matteo, cellules trajets
+  bleues, inner box gray equilibre.tsx:180).
 
 ## Next step exact
 0. Ben : SUPABASE_SERVICE_ROLE_KEY dans .env.local (dashboard →
