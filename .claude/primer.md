@@ -302,6 +302,23 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   complet = mot de passe (suffixe hex 8). Codes regénérés via
   set-dev-password et vérifiés OK ×3.
 
+- 15/08 : refonte design lancée (validée Ben) — direction : étendre la
+  DA « lagoon » de la landing (Fraunces + Manrope, tokens sea-ink/
+  lagoon dans styles.css) à toute l'app ; réfs BlaBlaCar (trajet),
+  Airbnb (confiance), iOS 26 Liquid Glass (chrome translucide).
+  ÉTAPE 1 SHELL FAITE (commit 3b47308, déployé, vérifié Chrome) :
+  hamburger + drawer SUPPRIMÉS → tab bar fixe 5 onglets (Semaine/
+  Demandes/Hubs/Équilibre/Foyer, lucide, safe-area iOS, .app-tabbar
+  translucide), header verre + wordmark Moov*eee* (Fraunces, eee
+  lagoon italique), login refait (island-shell, kicker, champs
+  .field-lagoon, bouton .btn-lagoon dégradé), title « Mooveee »,
+  reduced-motion sur .rise-in. Enfants/Activités accessibles via
+  Foyer (liens existants) ; déconnexion déjà sur Foyer.
+  ÉTAPE 2 À FAIRE : passe écran par écran (8 écrans encore en
+  gray/blue Tailwind) — semaine façon BlaBlaCar (timeline), cartes
+  island-shell, purge des liens redondants de Foyer (doublons tab
+  bar), boutons bg-blue-600 → btn-lagoon partout.
+
 ## Next step exact
 0. Ben : SUPABASE_SERVICE_ROLE_KEY dans .env.local (dashboard →
    Project Settings → API → service_role), puis
