@@ -13,7 +13,8 @@
     "lint": "eslint",
     "format": "prettier --write . && eslint --fix",
     "check": "prettier --check .",
-    "set-dev-password": "node --env-file-if-exists=.env.local scripts/set-dev-password.ts"
+    "set-dev-password": "node --env-file-if-exists=.env.local scripts/set-dev-password.ts",
+    "erase-user": "node --env-file-if-exists=.env.local scripts/erase-user.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.111.0",
