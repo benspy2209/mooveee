@@ -378,8 +378,12 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   trajet tiers détaché, foyer voisin intact). Smoke tests OK (policies,
   RPC, update avec contrainte check, anon refusé 42501, erase refusée
   aux clients). Types régénérés. CLAUDE.md section dette réécrite.
-  Reste étape 12 : purge Storage côté app avant erase_user, seuil de
-  réidentification (avec l'étape 10), validation AIPD (externe).
+  Reste étape 12 : ~~purge Storage~~ FAIT le 16/08 (commit 7040986) —
+  scripts/erase-user.ts (npm run erase-user -- <email>) : purge
+  child-photos des foyers seuls-membres + meeting-point-photos des hubs
+  dissous PUIS rpc erase_user (grant service_role, migration 0022,
+  appliquée). Testé réel avec photo uploadée : bucket 0 objet, base 0
+  ligne. Restent : seuil de réidentification (étape 10), AIPD (externe).
 
 ## Next step exact
 0. Ben : SUPABASE_SERVICE_ROLE_KEY dans .env.local (dashboard →
