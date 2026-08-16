@@ -385,6 +385,22 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   appliquée). Testé réel avec photo uploadée : bucket 0 objet, base 0
   ligne. Restent : seuil de réidentification (étape 10), AIPD (externe).
 
+- 16/08 : ÉTAPE 10 FAITE (migration 0023, appliquée + testée, commit
+  0d5f717) — compute_institution_metrics(mois) (familles actives =
+  foyers de hubs de l'institution avec trajet dans le mois, hubs_count,
+  trips_volume publié = palier jamais facturation) et
+  compute_impact_snapshots(mois) GARDÉ par
+  reidentification_min_families (exception si le paramètre manque).
+  Les deux definer révoquées clients + grant service_role, upserts
+  mensuels (index uniques), cron pg_cron le 1er à 03h30 (mois échu).
+  TESTÉ : institution synthétique sur Ecole Boomhut → metrics 1/1/3
+  corrects ; seuil 12 → 0 snapshot (2 familles) ; contre-épreuve seuil
+  1 → snapshots corrects (2 familles, 2 trajets partagés) ; seuil
+  restauré, données de test purgées. km/CO2 null (dette distance).
+  Découverte : 2e hub « Quartier Léopold » (Waterloo) existe en base.
+  SÉQUENCE : restent étape 11 (défraiement SCHÉMA SEULEMENT, v4 §9) et
+  design étape 3 (semaine BlaBlaCar) + retours Stéphane + AIPD externe.
+
 ## Next step exact
 0. Ben : SUPABASE_SERVICE_ROLE_KEY dans .env.local (dashboard →
    Project Settings → API → service_role), puis
