@@ -401,6 +401,24 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   SÉQUENCE : restent étape 11 (défraiement SCHÉMA SEULEMENT, v4 §9) et
   design étape 3 (semaine BlaBlaCar) + retours Stéphane + AIPD externe.
 
+- 16/08 (run autonome, commit e97615a, déployé) :
+  ÉTAPE 11 CLOSE sans code — schéma 0001 déjà 100 % conforme v4 §9
+  (vecteurs club/po_ecole/commune/association_parents, rate_eur_per_km
+  par reconnaissance, is_active default false, plafonds app_settings,
+  policies lecture seule, 0 donnée, 0 logique métier). Acté CLAUDE.md
+  (étapes 10-11-12 barrées dans la séquence).
+  DESIGN ÉTAPE 3 FAIT : /semaine grille horaire 6h-22h REMPLACÉE par
+  timeline covoiturage (réf BlaBlaCar) — groupes par jour (kicker),
+  heure en gros tabular + Aller/Retour ⇄ si lié, fil origine→
+  destination (.trip-thread : point creux lagoon → point plein palm),
+  ligne activité·enfant (ou « passage sans enfant »), pastille
+  conducteur / « À couvrir » ambre / Annulé, mention « publié au hub ».
+  Constantes grille + CHILD_COLORS partiels supprimés (orphelins).
+  Vérifié Chrome mobile : rendu + modale TripDetail intacte (bulletin
+  de dépôt fonctionne). TOUT EST FAIT côté interne — on attend :
+  retours Stéphane (parcours de test), clarification v4/Version 3,
+  AIPD externe. Prochaine session : traiter les retours Stéphane.
+
 ## Next step exact
 0. Ben : SUPABASE_SERVICE_ROLE_KEY dans .env.local (dashboard →
    Project Settings → API → service_role), puis
