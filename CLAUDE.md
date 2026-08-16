@@ -427,12 +427,17 @@ Ne pas coder de pourcentage fixe d'automatisation.
    hub_relations gelé `prepared`, opportunity_matches en observation pure,
    notification_preferences non calibrées. Migrations 0019-0020.
    **Arbitrage : `places` = lieux publics uniquement, jamais un domicile.**
-10. Métriques institutionnelles, sans facturation automatique
-11. Module défraiement : **schéma seulement** (v4 §9.1 durcit la v2 : la
-    logique métier — calcul de distance, notes, plafonds — ne se code pas
-    avant validation juridique)
-12. Audit RLS et droits d'exécution complets, seuil de réidentification,
-    test d'effacement
+10. ~~Métriques institutionnelles, sans facturation automatique~~
+    (migration 0023, 16/08 : calculs mensuels + cron, seuil de
+    réidentification appliqué, testé)
+11. ~~Module défraiement : schéma seulement~~ (clos le 16/08 : le schéma
+    0001 est déjà conforme v4 §9 — 4 vecteurs, barème par reconnaissance
+    jamais en dur, is_active false par défaut, plafonds dans
+    app_settings, policies lecture seule, AUCUNE logique métier codée —
+    et il n'y en aura pas avant validation juridique)
+12. ~~Audit RLS et droits d'exécution complets, seuil de réidentification,
+    test d'effacement~~ (migrations 0021-0022, 15-16/08 : voir section
+    Dette ; restent AIPD externe et seuil désormais actif via 0023)
 
 Rien ne va en pilote avec de vraies familles avant l'étape 12 et la
 validation de la DPIA.

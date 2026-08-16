@@ -80,11 +80,6 @@ const CHILD_COLORS = [
   'border-teal-300 bg-teal-50 text-teal-900',
 ]
 
-const GRID_HOUR_START = 6
-const GRID_HOUR_END = 22
-const HOUR_HEIGHT_PX = 44
-const CARD_HEIGHT_PX = 40
-
 function formatTime(w: WallClock): string {
   return `${String(w.hh).padStart(2, '0')}:${String(w.mm).padStart(2, '0')}`
 }
@@ -362,7 +357,6 @@ function WeekScreen({
   const [generationError, setGenerationError] = useState<string | null>(null)
   const [showPassage, setShowPassage] = useState(false)
 
-  const childIndex = new Map(childrenList.map((c, i) => [c.id, i]))
   const childName = new Map(childrenList.map((c) => [c.id, c.first_name]))
   const selectedTrip = trips.find((t) => t.id === selectedTripId) ?? null
 
@@ -563,127 +557,123 @@ function WeekScreen({
             </div>
           )}
 
-          <div className="mt-4 overflow-x-auto">
-            <div className="flex min-w-[56rem]">
-              {/* Axe des heures */}
-              <div
-                className="relative w-12 shrink-0"
-                style={{
-                  height:
-                    (GRID_HOUR_END - GRID_HOUR_START) * HOUR_HEIGHT_PX + 24,
-                }}
-              >
-                {Array.from(
-                  { length: GRID_HOUR_END - GRID_HOUR_START },
-                  (_, i) => (
-                    <span
-                      key={i}
-                      className="absolute right-2 text-xs text-gray-400"
-                      style={{ top: i * HOUR_HEIGHT_PX + 20 }}
-                    >
-                      {GRID_HOUR_START + i}h
-                    </span>
-                  ),
-                )}
-              </div>
-
-              {dayColumns.map(({ day, dayTrips }, dayIdx) => {
-                // Position par heure ; en cas de chevauchement, la carte
-                // suivante est poussée juste sous la précédente.
-                let previousBottom = -Infinity
-                const positioned = dayTrips.map((trip) => {
-                  const wall = toBrusselsWallClock(new Date(trip.scheduled_at))
-                  const minutes = (wall.hh - GRID_HOUR_START) * 60 + wall.mm
-                  let top = Math.max(
-                    0,
-                    Math.min(
-                      (minutes / 60) * HOUR_HEIGHT_PX,
-                      (GRID_HOUR_END - GRID_HOUR_START) * HOUR_HEIGHT_PX -
-                        CARD_HEIGHT_PX,
-                    ),
-                  )
-                  if (top < previousBottom) top = previousBottom
-                  previousBottom = top + CARD_HEIGHT_PX + 2
-                  return { trip, wall, top }
-                })
-
-                return (
-                  <div
-                    key={dayIdx}
-                    className="min-w-0 flex-1 border-l border-gray-100"
-                  >
-                    <p className="px-1 text-center text-xs font-medium text-gray-700">
-                      {DAY_LABELS[dayIdx]}{' '}
-                      <span className="text-gray-400">
-                        {String(day.d).padStart(2, '0')}/
-                        {String(day.m).padStart(2, '0')}
-                      </span>
-                    </p>
-                    <div
-                      className="relative mt-1"
-                      style={{
-                        height:
-                          (GRID_HOUR_END - GRID_HOUR_START) * HOUR_HEIGHT_PX,
-                      }}
-                    >
-                      {Array.from(
-                        { length: GRID_HOUR_END - GRID_HOUR_START },
-                        (_, i) => (
-                          <div
-                            key={i}
-                            className="absolute inset-x-0 border-t border-gray-100"
-                            style={{ top: i * HOUR_HEIGHT_PX }}
-                          />
-                        ),
-                      )}
-
-                      {positioned.map(({ trip, wall, top }) => {
-                        const childId = trip.trip_children[0]?.child_id
-                        const colorClass =
-                          trip.status === 'annule'
-                            ? 'border-gray-300 bg-gray-100 text-gray-400 line-through'
-                            : CHILD_COLORS[
-                                (childIndex.get(childId ?? '') ?? 0) %
-                                  CHILD_COLORS.length
-                              ]
-                        const driver = members.find(
-                          (m) => m.user_id === trip.driver_id,
-                        )
-                        return (
+          {/* Timeline façon covoiturage : trajets groupés par jour, fil
+              origine→destination, heure en évidence. La grille horaire a
+              été retirée (design étape 3, réf. BlaBlaCar). */}
+          <div className="mt-5 space-y-6">
+            {dayColumns.map(({ day, dayTrips }, dayIdx) => {
+              if (dayTrips.length === 0) return null
+              return (
+                <div key={dayIdx}>
+                  <p className="island-kicker">
+                    {DAY_LABELS[dayIdx]} {String(day.d).padStart(2, '0')}/
+                    {String(day.m).padStart(2, '0')}
+                  </p>
+                  <ul className="mt-2 space-y-2">
+                    {dayTrips.map((trip) => {
+                      const wall = toBrusselsWallClock(
+                        new Date(trip.scheduled_at),
+                      )
+                      const childId = trip.trip_children[0]?.child_id
+                      const cancelled = trip.status === 'annule'
+                      const driver = members.find(
+                        (m) => m.user_id === trip.driver_id,
+                      )
+                      return (
+                        <li key={trip.id}>
                           <button
-                            key={trip.id}
                             type="button"
                             onClick={() =>
                               setSelectedTripId(
                                 selectedTripId === trip.id ? null : trip.id,
                               )
                             }
-                            className={`absolute inset-x-0.5 overflow-hidden rounded border px-1 py-0.5 text-left text-[10px] leading-tight ${colorClass} ${
-                              selectedTripId === trip.id
-                                ? 'ring-2 ring-blue-500'
-                                : ''
+                            className={`island-shell flex w-full items-stretch gap-3 rounded-2xl px-4 py-3 text-left ${
+                              cancelled ? 'opacity-55' : ''
                             }`}
-                            style={{ top, height: CARD_HEIGHT_PX }}
+                            style={
+                              selectedTripId === trip.id
+                                ? { borderColor: 'var(--lagoon-deep)' }
+                                : undefined
+                            }
                           >
-                            <span className="font-semibold">
-                              {formatTime(wall)}
-                            </span>{' '}
-                            {trip.direction === 'aller' ? '→' : '←'}{' '}
-                            {trip.activities?.label ?? 'Trajet'}
-                            <br />
-                            {childId ? childName.get(childId) : ''}
-                            {trip.status !== 'annule' &&
-                              (driver
-                                ? ` · ${driver.users?.first_name ?? 'Conducteur'}`
-                                : ' · À couvrir')}
+                            <div className="flex w-14 shrink-0 flex-col items-start">
+                              <span
+                                className={`text-lg font-bold tabular-nums ${
+                                  cancelled ? 'line-through' : ''
+                                }`}
+                              >
+                                {formatTime(wall)}
+                              </span>
+                              <span
+                                className="text-xs font-semibold"
+                                style={{ color: 'var(--lagoon-deep)' }}
+                              >
+                                {trip.direction === 'aller'
+                                  ? 'Aller'
+                                  : 'Retour'}
+                                {trip.linked_trip_id ? ' ⇄' : ''}
+                              </span>
+                            </div>
+
+                            <div className="trip-thread shrink-0" aria-hidden />
+
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium">
+                                {trip.origin_label ?? 'Départ'}
+                              </p>
+                              <p
+                                className="mt-2 truncate text-sm font-medium"
+                                style={{ color: 'var(--palm)' }}
+                              >
+                                {trip.destination_label ??
+                                  trip.activities?.label ??
+                                  'Arrivée'}
+                              </p>
+                              <p className="mt-1 truncate text-xs text-gray-500">
+                                {trip.activities?.label ?? 'Trajet'}
+                                {childId && childName.get(childId)
+                                  ? ` · ${childName.get(childId)}`
+                                  : !trip.has_children
+                                    ? ' · passage sans enfant'
+                                    : ''}
+                              </p>
+                            </div>
+
+                            <div className="flex shrink-0 flex-col items-end justify-center gap-1">
+                              {cancelled ? (
+                                <span className="btn-ghost px-2.5 py-0.5 text-xs opacity-80">
+                                  Annulé
+                                </span>
+                              ) : driver ? (
+                                <span className="btn-ghost px-2.5 py-0.5 text-xs">
+                                  {driver.users?.first_name ?? 'Conducteur'}
+                                </span>
+                              ) : (
+                                <span
+                                  className="rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                                  style={{
+                                    background: 'rgba(201, 138, 46, 0.14)',
+                                    color: '#c98a2e',
+                                  }}
+                                >
+                                  À couvrir
+                                </span>
+                              )}
+                              {trip.published_to_hub && !cancelled && (
+                                <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                                  Publié au hub
+                                </span>
+                              )}
+                            </div>
                           </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              )
+            })}
           </div>
 
           {selectedTrip && (

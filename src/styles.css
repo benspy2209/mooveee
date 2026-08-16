@@ -488,6 +488,50 @@ a:where(.block.rounded-md):active {
   background: linear-gradient(150deg, #e8b04b, #c98a2e);
 }
 
+/* Fil de trajet (timeline origine→destination, réf. covoiturage) :
+   point de départ creux, ligne, point d'arrivée plein. */
+.trip-thread {
+  width: 9px;
+  margin-top: 6px;
+  margin-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.trip-thread::before,
+.trip-thread::after {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.trip-thread::before {
+  border: 2px solid var(--lagoon-deep);
+  background: transparent;
+}
+
+.trip-thread::after {
+  background: var(--palm);
+}
+
+.trip-thread {
+  background: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 4px,
+    var(--line) 4px,
+    var(--line) calc(100% - 4px),
+    transparent calc(100% - 4px)
+  );
+  background-size: 1.5px 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  justify-content: space-between;
+}
+
 /* Entrées en cascade sur les listes de cartes. */
 .rise-in.d-1 {
   animation-delay: 60ms;
