@@ -43,7 +43,15 @@ client compris, encapsulable par Capacitor pour l'App Store.
 **Règle** : n'introduire aucune dépendance au rendu serveur au runtime
 dans les étapes suivantes. Pas de loader serveur, pas de server function,
 pas d'API route nécessaire au fonctionnement : tout passe par Supabase
-depuis le client.
+depuis le client. Les Edge Functions Supabase sont autorisées (code dans
+`supabase/functions/`, hors du projet TypeScript du front : exclues de
+`tsconfig.json` et d'`eslint.config.js`). Première : `access-code-login`
+(11/10/2026), provisoire jusqu'au SMTP Brevo.
+
+**Cadrage** : les six documents de référence du code vivent dans `docs/`
+(`01-PRD.md`, `02-TRD.md`, `03-APP-FLOW.md`, `04-UI-BRIEF.md`,
+`05-BACKEND-SCHEMA.md`, `06-PLAN.md`). Les tenir à jour à chaque étape ;
+les décisions produit tranchées sont dans `docs/06-PLAN.md` section C.
 
 ---
 
@@ -139,7 +147,12 @@ lue par un cercle plus large que son propriétaire, passer par une fonction
 `security definer` qui choisit ses colonnes. Jamais une policy `select`.
 
 Fonctions existantes de ce type : `hub_member_profiles(hub_id)`,
-`hub_user_first_name(user_id)`, `hub_trip_children_count(trip_id)`.
+`hub_user_first_name(user_id)`, `hub_trip_children_count(trip_id)`,
+`trip_open_in_my_hubs(trip_id)` (0024). Depuis 0024, `hub_trips_view` est
+une vue SANS `security_invoker` (droits du propriétaire, filtre
+d'appartenance porté par la vue) et `trips` n'a plus aucune policy hub :
+la règle « jamais de select direct sur trips côté hub » est désormais
+portée par la base, plus seulement par le code.
 
 ### `security_invoker` sur une vue propage la RLS de l'appelant
 

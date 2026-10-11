@@ -235,16 +235,11 @@ function EmailOtpLogin({
 
 // Connexion par code d'accès : mot de passe Supabase posé par
 // l'administrateur via `npm run set-dev-password`. Mode principal tant
-// que l'envoi d'email (SMTP plafonné) n'est pas branché.
-// Le préfixe du code (avant le premier tiret) désigne le compte ; le
-// code complet est le mot de passe. Seuls les emails figurent dans le
-// bundle, jamais les codes.
-const CODE_EMAILS: Record<string, string> = {
-  ben: 'debruijneb@gmail.com',
-  steph: 'swauquaire@gmail.com',
-  mooveee: 'mooveee.app@proton.me',
-}
-
+// que l'envoi d'email (SMTP Brevo, décision D2 du 11/10) n'est pas branché.
+// La correspondance préfixe → compte vit dans le secret ACCESS_CODE_EMAILS
+// de l'Edge Function `access-code-login` : plus aucun email dans le bundle
+// (rétro cadrage du 11/10/2026, trou B.1). Le client ne fait que poser la
+// session renvoyée.
 function AccessCodeLogin() {
   const [accessCode, setAccessCode] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -255,32 +250,48 @@ function AccessCodeLogin() {
     setError(null)
 
     const code = accessCode.trim().toLowerCase()
-    const email = CODE_EMAILS[code.split('-')[0]]
-    if (!email) {
+    if (!code.includes('-')) {
       setError('Code d’accès invalide.')
       return
     }
 
     setSubmitting(true)
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password: code,
+    const { data, error: invokeError } = await supabase.functions.invoke<{
+      access_token?: string
+      refresh_token?: string
+      error?: string
+    }>('access-code-login', { body: { code } })
+
+    if (invokeError || !data?.access_token || !data.refresh_token) {
+      setSubmitting(false)
+      // La fonction renvoie un JSON { error } avec un statut 4xx/5xx ;
+      // le client functions-js l'expose via le contexte de l'erreur.
+      let message = 'Code d’accès invalide.'
+      if (invokeError && 'context' in invokeError) {
+        const ctx = (invokeError as { context?: Response }).context
+        try {
+          const body = ctx ? await ctx.clone().json() : null
+          if (body?.error) message = String(body.error)
+        } catch {
+          // corps non JSON : message par défaut
+        }
+      } else if (data?.error) {
+        message = data.error
+      }
+      setError(message)
+      return
+    }
+
+    const { error: sessionError } = await supabase.auth.setSession({
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
     })
     setSubmitting(false)
-
-    if (signInError) {
-      if (/disabled/i.test(signInError.message)) {
-        setError(
-          'Connexion par code désactivée côté Supabase. À activer dans Authentication → Sign In / Providers.',
-        )
-        return
-      }
-      if (/invalid login credentials/i.test(signInError.message)) {
-        setError('Code d’accès invalide.')
-        return
-      }
-      setError(signInError.message)
+    if (sessionError) {
+      setError(sessionError.message)
     }
+    // Succès : onAuthStateChange pose la session, <Navigate to="/foyer" />
+    // prend le relais.
   }
 
   return (

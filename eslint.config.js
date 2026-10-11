@@ -3,6 +3,8 @@
 import { tanstackConfig } from '@tanstack/eslint-config'
 
 export default [
+  // Fonctions Deno (Edge Functions Supabase) : hors du projet TS du front.
+  { ignores: ['supabase/functions/**', '.output/**'] },
   ...tanstackConfig,
   {
     rules: {

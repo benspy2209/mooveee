@@ -444,3 +444,31 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   (^), champ package.json "pnpm" obsolète retiré (→ allowBuilds dans
   pnpm-workspace.yaml), lockfile régénéré et commité. Build + prerender
   + _shell.html vérifiés. Règle : ne plus jamais remettre "latest".
+
+- 11/10 : RÉTRO CADRAGE (skill cadrage-vibe-coding, lecture seule du
+  code) — six docs créés dans docs/ (01-PRD, 02-TRD, 03-APP-FLOW,
+  04-UI-BRIEF, 05-BACKEND-SCHEMA, 06-PLAN), marqués [déduit du code] /
+  [à confirmer]. Constat clé : AUCUNE techno mobile (ni Capacitor, ni
+  Expo, ni manifest) = SPA web mobile-first. Rapport complet (15 écarts,
+  22 trous sécu/robustesse, 15 questions à trancher, plan Phase 2 C1→C17)
+  dans docs/06-PLAN.md. État Supabase vérifié via MCP : 0 edge function,
+  5 tables RLS sans policy (voulu), 2 fonctions sans search_path,
+  migrations 0019-0023 enregistrées sous horodatage. Vercel : projet
+  « mooveeesss » team beneloo, mooveee.app. docs/ NON commité, aucun
+  fichier de code touché. Next : Ben tranche les 15 questions (06-PLAN §C)
+  puis C1→C3 (hygiène, erreurs, tests).
+- 11/10 (2) : DÉCISIONS D1-D8 de Ben reportées dans docs/ (06-PLAN §C) +
+  C0 FAIT : app publique sur www.mooveee.app → (a) migration 0024
+  APPLIQUÉE via execute_sql (apply_migration MCP renvoyait « Invalid or
+  expired requestState ») et enregistrée à la main dans
+  supabase_migrations.schema_migrations version 0024 : trips_hub_select
+  supprimée, hub_trips_view recréée SANS security_invoker, helper
+  trip_open_in_my_hubs pour trip_requests_insert ; vérifié SQL (1 seule
+  policy sur trips, anon exclu, test en rôle authenticated = 0 trajet
+  d'autrui visible, vue OK). (b) Edge Function access-code-login déployée
+  v1 (verify_jwt false, secret ACCESS_CODE_EMAILS posé via CLI), login.tsx
+  sans aucun email (build vérifié 0), tsconfig/eslint excluent
+  supabase/functions, types régénérés. Lint : erreurs préexistantes
+  identiques (database.ts, trips.ts…), rien de nouveau. pnpm-lock supprimé.
+  ⚠ Le bundle LIVE contient encore les emails tant que main n'est pas
+  poussé (push = deploy Vercel). Next : push (demande Ben), puis C1→C3.
