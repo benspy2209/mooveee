@@ -472,3 +472,12 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   identiques (database.ts, trips.ts…), rien de nouveau. pnpm-lock supprimé.
   ⚠ Le bundle LIVE contient encore les emails tant que main n'est pas
   poussé (push = deploy Vercel). Next : push (demande Ben), puis C1→C3.
+- 11/10 (3) : PUSHÉ. 1er deploy (5f9b784) REFUSÉ par Vercel : react-start
+  1.168.34 (CVE-2026-102989) → bump ^1.168.61 (commit 2cfb5e4, pushé,
+  deploy READY). Bundle live vérifié chunk par chunk : 0 email, le chunk
+  login appelle access-code-login. ⚠ node_modules était en layout pnpm ;
+  npm install l'a réécrit, package-lock régénéré. DFD livré dans
+  ~/Downloads/DFD-mooveee.{html,png}. Message + parcours de test pour
+  Steph donnés à Ben (compte steph-…, hub « Ecole Boomhut », foyer Ben en
+  2e famille). Next : Ben teste la connexion par code en prod, envoie à
+  Steph ; puis C1→C3.
