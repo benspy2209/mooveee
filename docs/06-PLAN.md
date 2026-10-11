@@ -82,6 +82,7 @@ Décisions de Ben du 11/10/2026 (reportées dans les docs 01, 02, 05) :
 - D6 Photon : Edge Function proxy, aucune requête directe depuis le client.
 - D7 Consentements : tracés en base à chaque acceptation, avec version du texte et horodatage.
 - D8 Pacte : en base, versionné ; la version acceptée est liée à chaque consentement.
+- D9 (Stéphane, 11/10) Mobile : PWA installable sur l'écran d'accueil, pas de stores pour le pilote ; publication sur les stores plus tard, au nom de la structure exploitante.
 
 Restent ouvertes, à voir avec le client (Stéphane) :
 
@@ -122,9 +123,9 @@ Priorité P0 = bloquant pilote ; P1 = avant les premières vraies familles ; P2 
 | C10 | P1 | Fuseau et dates | `activites.tsx` utilise `fromBrusselsWallClock` ; `updated_at`/`validated_at`/`responded_at` par triggers `now()` | test DST sur la saisie d'activité depuis un navigateur en UTC |
 | C11 | P1 | Paramètres en base | fenêtre 90 min et plafonds de places dans `app_settings`, libellé d'horizon dynamique (le pacte est traité en C5) | grep `90` dans `hubs.tsx` = 0 |
 | C12 | P1 | Multi-foyer | `household_members` : `order by joined_at` partout, ou sélecteur de foyer si Q11 = garde alternée | comportement déterministe pour un compte à deux foyers |
-| C13 | P2 | Notifications | Edge Function cron qui porte `dropoff-reminders` et `concierge` côté serveur ; canal email d'abord ; `notification_preferences` avec défauts ; push après Capacitor | relance de dépôt reçue par email 20 min après un trajet sans confirmation |
-| C14 | P2 | Préparation mobile | `viewport-fit=cover`, safe-area top, champs 44 px, focus visible, Escape sur toutes les modales, polices auto-hébergées, manifest PWA (installable en attendant Capacitor) | Lighthouse PWA installable ; audit tactile 44 pt sur E1 à E9 |
-| C15 | P2 | Capacitor (si Q3 = oui) | init iOS/Android, URL scheme, `appUrlOpen` + `setSession`, plugin Camera, TestFlight et test interne, fiche store, politique de confidentialité en ligne (C5) | magic link ouvre l'app et connecte ; build TestFlight installé sur un iPhone de test |
+| C13 | P1 (après pilote) | Notifications | Web Push (VAPID) : table `push_subscriptions`, demande de permission après un geste dans l'app installée (iOS 16.4+ seulement en PWA installée), Edge Function `send-push` + cron serveur portant `dropoff-reminders` et `concierge` ; email Brevo en repli ; `notification_preferences` avec défauts | relance de dépôt reçue en push 20 min après un trajet sans confirmation, sur Android et iPhone de test |
+| C14 | P0 | PWA pour le pilote (D9) | manifest (nom, icônes 192/512/maskable, `display: standalone`, `theme_color` lagon), service worker vite-plugin-pwa en `autoUpdate` avec précache du shell (sans mise en cache des données Supabase), `viewport-fit=cover`, safe-area top, champs 44 px, polices auto-hébergées ; connexion dans la PWA par code OTP 6 chiffres (sur iPhone le lien magique ouvre Safari, pas l'app installée) | Lighthouse « installable » ; installée sur un iPhone et un Android de test, connexion par code OTP depuis l'app installée, session conservée après fermeture |
+| C15 | P3 (plus tard, D9) | Capacitor et stores, au nom de la structure exploitante | init iOS/Android, URL scheme, `appUrlOpen` + `setSession`, plugin Camera, TestFlight et test interne, fiche store, politique de confidentialité en ligne (C5) | magic link ouvre l'app et connecte ; build TestFlight installé sur un iPhone de test |
 | C16 | P2 | Observabilité et opérations | Sentry (déjà exclu du bundle Nitro, donc prévu) ou équivalent ; journal des effacements ; purge selon `erasure_delay_days` ; tableau SQL des métriques pour le porteur | une erreur front remonte avec release et route |
 | C17 | P2 | Dettes produit | annuler une demande envoyée, pagination E8, renouvellement des URL signées, persistance du « Masquer », notice d'activité effaçable, favoris renommables (`custom_label`) | recette des US du PRD |
 
