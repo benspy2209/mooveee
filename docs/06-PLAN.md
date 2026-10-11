@@ -85,7 +85,8 @@ Décisions de Ben du 11/10/2026 (reportées dans les docs 01, 02, 05) :
 
 Restent ouvertes, à voir avec le client (Stéphane) :
 
-1. **Pilote** : date cible, nombre de familles, et surtout qui valide la DPIA et quand. Rien ne va en pilote avant (règle `CLAUDE.md`).
+1. **Pilote** : proposition Stéphane du 11/10 = stage de tennis à Rhode-Saint-Genèse, 2 au 6 novembre 2026 (Toussaint néerlandophone), 10 à 15 familles, hub fermé ; objectif, pas obligation. Reste : qui valide la DPIA (voir 2b).
+1b. **AIPD** : le doc v4 §11.4 parle d'un « premier jet rédigé » ; il n'est ni dans le repo ni sur le Mac de Ben (recherche du 11/10) : il est dans le corpus de Stéphane. Ben fournit l'annexe technique (DFD, registre des traitements, sous-traitants). Ancienne formulation : date cible, nombre de familles, et surtout qui valide la DPIA et quand. Rien ne va en pilote avant (règle `CLAUDE.md`).
 2. ~~Connexion~~ tranché (D2). Reste : garder l'OTP 6 chiffres en plus du lien, oui par défaut.
 3. **Mobile** : web mobile seul pour le pilote, ou Capacitor dès maintenant ; iOS et Android ou iOS d'abord ; qui détient les comptes développeur et apparaît comme éditeur sur les stores.
 4. ~~Consentements~~ tranché (D7). Reste : rédaction des textes et emplacement de la politique de confidentialité (lié à la DPIA).
@@ -108,6 +109,7 @@ Priorité P0 = bloquant pilote ; P1 = avant les premières vraies familles ; P2 
 | # | P | Étape | Portée | Point de contrôle |
 |---|---|-------|--------|-------------------|
 | C0 | P0 | Exposition publique, fait en premier (demande Ben du 11/10, l'app est publique sur www.mooveee.app) | migration 0024 (fin de `trips_hub_select`, vue sans security_invoker, helper `trip_open_in_my_hubs`), ÉCRITE le 11/10, à appliquer par Ben ; retrait des emails du bundle selon l'option retenue (voir journal) | `select polname from pg_policy where polrelid='trips'::regclass` = `trips_household_all` seul ; grep `gmail` dans `.output/public` = 0 |
+| CP | P0 | Spécifique pilote Toussaint (proposition Stéphane du 11/10 : stage de tennis Rhode-Saint-Genèse, 2 au 6 novembre 2026, 10 à 15 familles, hub fermé autour du club) | date de fin sur une activité récurrente (`activities.until` ou `UNTIL` dans la rrule, respectée par `trips.ts`) sinon un stage de 5 jours génère 3 mois de trajets ; libellé « stage » ; 15 comptes créés par email (dépend de C4 Brevo) ; feuille de retours parents | une activité « stage lundi au vendredi 9h-16h, du 2 au 6/11 » génère exactement 10 trajets |
 | C1 | P0 | Hygiène repo et base | réparer `supabase migration list` (repair des 5 versions), un seul lockfile, README réécrit, `lang="fr-BE"`, devtools gardés par `DEV`, `search_path` sur les 2 fonctions | `supabase migration list` propre ; advisor sans WARN search_path ; build prod sans devtools |
 | C2 | P0 | Gestion d'erreur systématique | destructurer `error` sur toutes les requêtes secondaires ; bulletin affiche l'erreur ; retirer l'optimisme sur le conducteur ; `errorComponent` + `notFoundComponent` dans `__root` | Playwright : couper le réseau sur E8 affiche une erreur, pas « Trajet plus disponible » |
 | C3 | P0 | Tests | Vitest sur `trips.ts` (DST, idempotence), `concierge.ts` (imbalance, fail-closed sur null), `places.ts` ; Playwright sur P1 à P3 avec deux comptes de test | `npm test` vert en CI GitHub Actions |
