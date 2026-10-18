@@ -252,3 +252,63 @@ Pour Ben :
   « modification d'un trajet accepté » et « garde alternée » en P1 après
   le 6/11.
 - Écrire la migration `mooves_initial_balance` = 100 (numéro après 0024).
+
+---
+
+## F. Brouillon de réponse à Stéphane (à relire par Ben)
+
+> Salut Stéphane,
+>
+> Merci pour les sept réponses, elles tranchent ce qui bloquait. J'ai tout
+> réuni dans une référence unique datée (document 07 ci-joint), en trois
+> blocs comme tu le demandes : décisions produit (P10 à P16), pilote du
+> 2 novembre et faisabilité, mécanismes financiers à faire examiner.
+>
+> **Pour le 2 novembre.** J'ai réexaminé les notifications : je les passe en
+> priorité du pilote. Périmètre : demandes, acceptations, refus, annulations,
+> retrait de conducteur, en notification mobile (app installée, Android et
+> iPhone 16.4+), avec repli email, écran « Mes notifications » dans l'app
+> comme preuve de lecture, bouton « J'ai pris connaissance » horodaté sur
+> les annulations, et bandeau « appelez » si une confirmation manque à
+> moins de deux heures du départ. Le contenu du push reste neutre : aucun
+> prénom d'enfant ne passe par Apple ou Google. Compte cinq à six jours,
+> contre les trois à quatre annoncés, parce que la confirmation explicite
+> et le repli s'ajoutent à l'infrastructure. C'est tenable si c'est la seule
+> nouveauté fonctionnelle du pilote.
+>
+> **Ce que je propose de simplifier pour le stage, sans trahir tes
+> principes.** Un trajet accepté est immuable : le modifier revient à
+> l'annuler (notifié, confirmé) puis à en publier un nouveau. La nouvelle
+> confirmation est obtenue par construction et rien ne remplace l'accord
+> existant en silence. Le flux complet de proposition de changement avec
+> journal et détection de conflit vient juste après le pilote. Même logique
+> pour la garde alternée : le modèle « un enfant, un calendrier, plusieurs
+> foyers » demande de revoir le cœur du schéma (cinq à huit jours), je le
+> planifie après le 6/11 ; pour le stage, un enfant est dans un seul foyer
+> et le second parent peut y être invité comme membre. Distance : les
+> tranches sont déjà là, le détour en minutes vient après.
+>
+> **Mooves.** Le compteur privé que tu décris existe déjà (gain, usage,
+> équilibre privé, message privé en cas de déséquilibre durable) ; je passe
+> le départ à 100 et j'ajoute l'excédent au-dessus de 100 côté conducteur.
+> Le volet recharge, fonds, avantages et partenaires est bien séparable
+> techniquement, et l'architecture actuelle le permet sans rien rouvrir
+> (toute écriture passerait côté serveur). Mais il contredit la Note
+> d'arbitrage de juillet, qui fonde deux de nos interdits de code. Je garde
+> ces interdits en place jusqu'à une Note v3 appuyée sur un avis
+> professionnel. La partie C du document liste les sept points à faire
+> examiner (qualification des Mooves, statut du conducteur et assurance,
+> entité qui encaisse, partenaires, communes, vocabulaire, DPIA).
+>
+> **Document de référence.** Je joins le fichier exact sur lequel je
+> travaille, « Instructions Techniques Partenaire v4 », reçu le 15 août.
+>
+> **Trois décisions dont j'ai besoin de toi cette semaine** : valider le
+> périmètre du pilote ci-dessus ; me dire qui valide la DPIA et quand
+> (rien ne va aux familles sans elle) ; nommer l'entité et le conseil pour
+> le volet financier.
+>
+> Benjamin
+
+Pièces à joindre : le présent document (export PDF) et
+`MOOVEEE_Instructions_Techniques_Partenaire_v4.docx`.

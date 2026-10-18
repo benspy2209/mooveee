@@ -1,5 +1,7 @@
 # Primer Mooveee
 
+**18/10 : réponses de Stéphane Q3-Q7 consolidées dans `docs/07-DECISIONS-PORTEUR-2026-10.md`** (P10-P16, faisabilité 2/11, volet financier sous réserve, contradictions, brouillon de réponse en annexe F). Migration 0025 (solde initial 100) ÉCRITE, non appliquée. Rien reporté dans le code : interdits 1-2 maintenus jusqu'à Note v3. **Next : Ben relit doc 07 + annexe F, envoie à Stéphane avec le docx v4 ; puis C1→C3, et C13 notifications passe P0 (périmètre B2).**
+
 Projet actif : Mooveee (client externe, partage de trajets enfants).
 Séquence CLAUDE.md : étape 5 (hubs) livrée — socle + publication +
 demandes de place. Contrainte 0006 ÉLARGIE par Ben en fin de 0009
