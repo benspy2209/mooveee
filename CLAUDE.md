@@ -48,9 +48,10 @@ depuis le client. Les Edge Functions Supabase sont autorisées (code dans
 `tsconfig.json` et d'`eslint.config.js`). Première : `access-code-login`
 (11/10/2026), provisoire jusqu'au SMTP Brevo.
 
-**Cadrage** : les six documents de référence du code vivent dans `docs/`
+**Cadrage** : les documents de référence du code vivent dans `docs/`
 (`01-PRD.md`, `02-TRD.md`, `03-APP-FLOW.md`, `04-UI-BRIEF.md`,
-`05-BACKEND-SCHEMA.md`, `06-PLAN.md`). Les tenir à jour à chaque étape ;
+`05-BACKEND-SCHEMA.md`, `06-PLAN.md`, et `07-DECISIONS-PORTEUR-2026-10.md`
+= réponses du porteur d'octobre 2026, non encore reportées dans le code). Les tenir à jour à chaque étape ;
 les décisions produit tranchées sont dans `docs/06-PLAN.md` section C.
 
 ---

@@ -84,6 +84,11 @@ Décisions de Ben du 11/10/2026 (reportées dans les docs 01, 02, 05) :
 - D8 Pacte : en base, versionné ; la version acceptée est liée à chaque consentement.
 - D9 (Stéphane, 11/10) Mobile : PWA installable sur l'écran d'accueil, pas de stores pour le pilote ; publication sur les stores plus tard, au nom de la structure exploitante.
 
+Réponses de Stéphane aux questions 3 à 7 (11 et 18/10) : consolidées dans
+`07-DECISIONS-PORTEUR-2026-10.md` (P10 à P16, faisabilité 2/11, volet
+financier sous réserve). Les lignes ci-dessous restent telles quelles
+jusqu'à validation de ce document par Stéphane.
+
 Restent ouvertes, à voir avec le client (Stéphane) :
 
 1. **Pilote** : proposition Stéphane du 11/10 = stage de tennis à Rhode-Saint-Genèse, 2 au 6 novembre 2026 (Toussaint néerlandophone), 10 à 15 familles, hub fermé ; objectif, pas obligation. Reste : qui valide la DPIA (voir 2b).
@@ -93,12 +98,12 @@ Restent ouvertes, à voir avec le client (Stéphane) :
 4. ~~Consentements~~ tranché (D7). Reste : rédaction des textes et emplacement de la politique de confidentialité (lié à la DPIA).
 5. ~~Nom de famille~~ tranché (D5) : prénom plus initiale.
 6. ~~Lieux~~ tranché (D6) : Edge Function proxy. `places.created_by` à retirer de la lecture (inclus dans C9).
-7. **Distance** : rester sur les tranches déclarées, ou calculer depuis `places` (arbitrage porteur en attente depuis août).
+7. **Distance** : position Stéphane 11/10 = tranches avant acceptation, lieu exact après (P14, doc 07).
 8. ~~Trajets après modification~~ tranché (D3).
 9. ~~Dépublication~~ tranché (D4). Dépend du canal de notification (question 12) pour la partie « notifie ».
-10. **Signal Mooves §5.5** côté conducteur (départage des demandes reçues) : activer avec un libellé qualitatif, ou laisser hors pilote.
-11. **Garde alternée** : modéliser (enfant dans deux foyers) ou exclure explicitement du pilote.
-12. **Notifications** : push natif, email, ou bannières seules pour le pilote ; calibrage de `notification_preferences`.
+10. **Signal Mooves §5.5** côté conducteur (départage des demandes reçues) : activer avec un libellé qualitatif, ou laisser hors pilote. Position Stéphane 11/10 : P12, P13 (doc 07) ; volet financier sous réserve d'examen professionnel.
+11. **Garde alternée** : position Stéphane 11/10 = enfant dans plusieurs foyers, une fiche (P10, doc 07) ; proposé hors pilote.
+12. **Notifications** : position Stéphane 11/10 = push trajets dès le pilote, sans SMS, deux actions de confirmation (P15, doc 07) ; périmètre B2.
 13. ~~Pacte~~ tranché (D8) : en base, versionné, lié aux consentements.
 14. **Documents** : clarifier « v4 » vs « Version 3 » avec Stéphane ; valider les trois délais Concierge proposés (24 h, 3 semaines, 3 semaines).
 15. ~~Repo~~ tranché (D1) : npm. Reste : réparer l'historique des migrations, réécrire README (C1).
@@ -138,4 +143,5 @@ Ordre suggéré : C1 → C2 → C3 (une semaine), puis C4 + C5 + C6 en parallèl
 | 2026-08-16 | Phase 1 | fait | dernier commit e68b1d0 |
 | 2026-10-11 | Rétro cadrage | fait | six docs créés dans `docs/`, aucun fichier de code modifié |
 | 2026-10-11 | Décisions D1 à D8 | fait | reportées dans 01, 02, 05, 06 ; `pnpm-lock.yaml` supprimé |
+| 2026-10-18 | Réponses Stéphane Q3-Q7 | brouillon | doc 07 à relire par Ben puis envoyer ; rien reporté dans le code |
 | 2026-10-11 | C0 | fait côté code | Edge Function `access-code-login` déployée (v1) + secret posé + `login.tsx` sans email, build vérifié 0 email ; migration 0024 : voir note d'application ci-dessous ; déploiement Vercel = push main |
