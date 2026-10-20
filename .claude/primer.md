@@ -483,3 +483,39 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   Steph donnés à Ben (compte steph-…, hub « Ecole Boomhut », foyer Ben en
   2e famille). Next : Ben teste la connexion par code en prod, envoie à
   Steph ; puis C1→C3.
+- 20/10 (retour de test de Steph du 19/10, 4 points — doc 07 section G,
+  commit ec3daca, NON poussé) :
+  **G.1 CONNEXION PAR CODE CORRIGÉE EN PROD ET PROUVÉE.** Deux causes :
+  (a) template Supabase « Magic Link » par défaut, en anglais, avec
+  `{{ .ConfirmationURL }}` seul → aucun code dans l'email ;
+  (b) `mailer_otp_length = 8` côté serveur alors que login.tsx impose
+  six chiffres (pattern + maxLength) → saisie impossible même avec le
+  code, invisible depuis l'app. Posé via l'API Management
+  (`PATCH /v1/projects/chmijnxukwsfqlvaontf/config/auth`) : template FR
+  code en grand + lien en secours, sujet « Votre code de connexion
+  Mooveee », otp_length = 6. Template versionné dans
+  `supabase/templates/` (+ README : procédure d'application avec
+  `/usr/bin/python3`, le Python framework n'a pas les certs et curl avec
+  le jeton est refusé par le classifier). Preuve de bout en bout sur
+  debruijneb@gmail.com : email FR reçu avec six chiffres, puis
+  `POST /auth/v1/verify` → jetons émis. **Aucun changement dans src/.**
+  ⚠ limites de test : 1 email/minute par adresse (`smtp_max_frequency`),
+  30/h par projet, code valable 1 h. SMTP = Resend noreply@mooveee.app
+  (déjà branché, la mention « provisoire jusqu'au SMTP Brevo » de
+  CLAUDE.md est périmée).
+  **G.2 invitation WhatsApp** : court (le `join_code` et le RPC
+  `hub_for_join_code` existent, il manque une route d'arrivée + un lien
+  `wa.me`), mais arbitrage Steph requis d'abord — un code envoyé par
+  WhatsApp se transfère sans limite et aujourd'hui quiconque l'a voit les
+  trajets du hub. Recommandé : code partageable + validation d'entrée par
+  un responsable de hub.
+  **G.3 solde initial 100** : Steph confirme. Migration 0025 toujours NON
+  appliquée (la base renvoie 60). À appliquer par Ben.
+  **G.4 cartes** : Photon/OSM déjà en place pour la recherche ; il manque
+  l'affichage. Niveau 1 = bouton d'itinéraire (ouvre Maps/Plans, rien ne
+  sort de l'app) ; niveau 2 = carte MapLibre + tuiles OSM après le pilote ;
+  niveau 3 = API Google refusée (clé, facturation, requêtes hors UE,
+  contredit l'hébergement UE, DPIA non validée). Interdit n°6 tenu dans
+  les trois cas.
+  Next : Ben applique 0025 ; envoie la réponse G.5 à Steph et obtient
+  l'arbitrage G.2 ; puis niveau 1 des cartes, puis C1→C3.
