@@ -519,3 +519,41 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   les trois cas.
   Next : Ben applique 0025 ; envoie la réponse G.5 à Steph et obtient
   l'arbitrage G.2 ; puis niveau 1 des cartes, puis C1→C3.
+- 20/10 (2) — arbitrage de Steph rendu et vérifié :
+  **RETRAIT D'UN MEMBRE AJOUTÉ** (commit, NON poussé) : la validation
+  d'entrée existait déjà en base (auto-insertion forcée à
+  `validated_at = null` + `is_admin = false`, `auth_hub_ids()` ne retient
+  que les adhésions validées, `hub_members_admin_update` pour valider,
+  écrans « Valider / Refuser » présents) ; seul le retrait n'était exposé
+  par aucun écran alors que `hub_members_admin_delete` existe depuis
+  l'étape 5. `ValidatedMemberRow` dans hubs.tsx : bouton « Retirer » en
+  deux temps, réservé à un responsable, jamais sur soi-même ni sur un
+  autre responsable. Prouvé en base dans les deux sens en transaction
+  annulée (responsable = 1 ligne supprimée, membre simple = 0). tsc +
+  build verts ; les 3 erreurs eslint du fichier sont préexistantes.
+  **CONFIG AUTH CORRIGÉE PAR BEN** (le classifier me refuse ce PATCH) :
+  `site_url` = https://www.mooveee.app et `www` ajouté à
+  `uri_allow_list`. L'app vit sur www alors que seul l'apex était déclaré
+  → Supabase remplaçait le `redirect_to` du front par site_url, ce qui
+  explique le « il m'a ramené à l'écran du code » de Steph. Vérifié en
+  réel : le lien de l'email renvoie un 303 vers https://www.mooveee.app/
+  avec access_token et refresh_token dans le fragment, aucune erreur.
+  **RÉPONSE DPIA sur les adresses** (demandée par Steph) : Photon opéré
+  par komoot GmbH sur données OSM, serveurs Hetzner en Allemagne (IP
+  116.202.51.114 → your-server.de) ; partent le texte tapé, `lang=fr`,
+  `limit` et un biais FIXE 50.7/4.5 (centre de la Belgique, identique
+  pour tous, sans lien avec la position réelle) ; Photon voit en plus
+  l'IP du visiteur. **Aucun `navigator.geolocation` dans tout `src/`** et
+  Photon est le SEUL appel sortant tiers de l'application (vérifié par
+  grep). Option pour masquer l'IP : proxy par Edge Function UE.
+  **Hubs réels** : Ecole Boomhut EKD289 (propriétaire Ben), Quartier
+  Léopold ADW846 (mooveee.app@proton.me), **TC WIMBLEDON NDD284
+  (propriétaire Steph, créé le 18/10)** = le « hub de test » dont il
+  parle. Compte de test de Steph pour ChatGPT :
+  stefchat1234@proton.me (créé le 19/10).
+  ⚠ **Migration 0025 TOUJOURS NON APPLIQUÉE** : la base renvoie 60.
+  Steph veut vérifier les 100 pendant son test.
+  Next : Ben applique 0025 et envoie le message à Steph ; puis lien
+  d'invitation cliquable `/rejoindre?code=` + partage WhatsApp (seule
+  pièce manquante de l'arbitrage), PWA installable (D9, aucun manifest
+  ni dossier public aujourd'hui), boutons d'itinéraire, puis C1→C3.
