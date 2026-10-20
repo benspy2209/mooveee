@@ -451,3 +451,120 @@ par les parents, jamais le déplacement d'une personne.
 > choisi un hébergement européen et que la DPIA n'est pas validée.
 >
 > Benjamin
+
+---
+
+## H. Assistant vocal et écrit (proposition de Stéphane, 20/10/2026)
+
+Stéphane propose un assistant, à la voix et par écrit, qui comprend le
+besoin d'un parent et utilise les fonctions de l'application : créer une
+activité récurrente, chercher une aide pour un trajet, préparer une
+demande à une autre famille, préparer une invitation. Il demande un avis
+de faisabilité, pas un ajout au pilote.
+
+**Verdict : faisable, et l'architecture s'y prête mieux qu'il n'y paraît,
+à condition de traiter deux points durs et de commencer par l'écrit.**
+
+### H.1 Ce qui est déjà acquis : les droits d'accès
+
+C'est le point le plus solide, et il répond directement à l'exigence
+« les mêmes droits d'accès que le parent, aucun élargissement
+automatique ».
+
+Si l'assistant agit avec la session du parent, il hérite de ses droits
+**par construction** : la RLS refuse en base tout ce que le parent n'a
+pas le droit de lire ou d'écrire. Aucune règle d'accès n'est réécrite,
+donc aucune ne peut diverger. Un assistant qui tenterait de lire les
+trajets d'un hub où la famille n'est pas validée recevrait zéro ligne,
+sans qu'aucune ligne de code de l'assistant ait à le prévoir.
+
+Même chose pour la divulgation de coordonnées : `hub_member_profiles`
+choisit ses colonnes et ne renvoie ni téléphone ni code postal. Ce que
+l'assistant ne peut pas lire, il ne peut pas le dire.
+
+### H.2 Point dur numéro un : les données d'enfants (interdit 7)
+
+Les cinq exemples proposés contiennent tous une donnée d'enfant :
+l'activité d'un enfant, « Jules », le déplacement d'un mineur. L'interdit
+numéro sept du projet est net : aucune donnée enfant ne part vers un
+service d'IA externe.
+
+La voix aggrave le problème. Un enregistrement où le parent dit « Jules »
+transmet le prénom au fournisseur de transcription avant qu'on ait pu le
+retirer. La reconnaissance vocale intégrée aux navigateurs n'est pas une
+issue : sous Chrome elle envoie l'audio à Google.
+
+**Solution d'architecture : l'assistant ne voit jamais les noms.** Avant
+tout envoi, sur l'appareil, les prénoms connus sont remplacés par des
+jetons (`<enfant_1>`, `<parent_2>`, `<hub_1>`), et restitués au retour.
+Le remplacement est fiable, pas approximatif : on connaît la liste exacte
+des prénoms visibles par ce parent (son foyer, ses hubs), elle vient de
+la base. Le modèle ne reçoit que la structure de la demande et renvoie
+une intention d'action sur des jetons. Cela satisfait l'interdit 7 à la
+lettre, sans dépendre du contrat du fournisseur.
+
+**Conséquence pratique : commencer par l'écrit.** À l'écrit, on maîtrise
+exactement ce qui part. La voix suppose une transcription sur l'appareil,
+c'est un chantier distinct.
+
+### H.3 Point dur numéro deux : qui décide (interdits 4 et Concierge)
+
+Le matching propose, il n'assigne jamais, et tout ce qui implique un
+enfant passe par un humain. L'assistant **prépare**, il n'exécute pas :
+résumé de ce qu'il va faire, confirmation explicite, et la distinction
+« demande envoyée » / « trajet accepté » tenue dans les mots.
+
+Stéphane décrit déjà exactement cela. Sur ce point, sa proposition est
+alignée avec les règles du projet, il n'y a rien à arbitrer.
+
+### H.4 Ce qui manque vraiment : un vocabulaire d'actions
+
+C'est le vrai travail de fond, et il est indépendant de l'IA.
+
+Aujourd'hui, **une seule action d'écriture est exposée comme opération
+vérifiée côté serveur** : `accept_trip_request`. Toutes les autres
+(créer une activité, demander une place, rejoindre un hub, inviter) sont
+des écritures faites directement par l'interface, protégées par la RLS
+mais sans transaction métier nommée.
+
+Un assistant a besoin d'un vocabulaire fini d'actions atomiques et
+vérifiées, sinon il faudrait lui laisser écrire en base, ce qui est
+exclu. Ce travail est utile même si l'assistant ne se fait jamais.
+Exemple concret trouvé en analysant : rejoindre un hub fait aujourd'hui
+deux écritures séparées depuis le client, l'adhésion puis l'acceptation
+du Pacte. Si la seconde échoue, la famille est membre sans avoir accepté
+le Pacte. Un RPC transactionnel supprime ce cas.
+
+### H.5 Fournisseur, données, coûts
+
+- **Modèle** : fournisseur avec traitement en Union européenne et contrat
+  de sous-traitance (Mistral en France, ou un grand modèle via une région
+  européenne). Attention : le choix du fournisseur ne remplace pas la
+  pseudonymisation de H.2, il s'y ajoute.
+- **Voix** : à instruire séparément. C'est là que se trouvent les
+  transcriptions, donc le risque.
+- **Coût d'usage** : marginal à l'échelle d'un pilote, de l'ordre de
+  quelques euros par mois. Ce n'est pas le coût qui décide.
+- **AIPD** : elle n'est pas validée pour l'existant. Ce traitement devra
+  y figurer, avec la détection d'opportunités (v4 §11.3).
+- **PWA** : aucun obstacle pour l'écrit. Pour la voix, l'enregistrement
+  audio dans une application web installée fonctionne, mais l'encapsulage
+  Capacitor donnera un meilleur accès au micro et à la transcription sur
+  appareil.
+
+### H.6 Découpage proposé
+
+1. **Préparable aujourd'hui, sans assistant et utile en soi** : passer
+   les actions métier en RPC transactionnels nommés ; journal des actions
+   confirmées (utile aussi pour l'AIPD) ; bibliothèque de
+   pseudonymisation, testable sans aucun appel d'IA.
+2. **Premier parcours, par écrit** : « trouver une aide pour un trajet ».
+   Le choix de Stéphane est le bon : ce parcours lit des trajets
+   existants et prépare une demande, il ne crée ni activité ni
+   acceptation.
+3. **Chantier distinct** : la voix, avec transcription sur l'appareil.
+4. **En parallèle et bloquant** : avis professionnel sur l'AIPD, incluant
+   ce traitement.
+
+Rien de tout cela n'entre dans le pilote de novembre, comme Stéphane le
+dit lui-même.
