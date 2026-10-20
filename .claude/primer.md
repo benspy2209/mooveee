@@ -608,3 +608,13 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   pas perturber la détection du framework.
   Next : Ben pousse (= déploiement) puis envoie le message à Steph avec
   le lien d'invitation réel ; puis boutons d'itinéraire, puis C1→C3.
+- 20/10 (4) : **POUSSÉ PAR BEN ET EN PRODUCTION** (le classifier me
+  refuse `git push` ET `git fetch` sur ce dépôt). Vérifié sur
+  https://www.mooveee.app : `/rejoindre?code=NDD284` rend la page
+  d'invitation et mémorise le code dans localStorage, service worker
+  `activated`, `lang="fr"`, manifeste servi par Vercel en
+  **`application/manifest+json`** (le doute est levé, aucun `vercel.json`
+  n'a été nécessaire), icônes et favicon en 200. Lien d'invitation réel
+  du hub de Steph : https://www.mooveee.app/rejoindre?code=NDD284
+  (TC WIMBLEDON). Next : Ben envoie le message à Steph ; puis boutons
+  d'itinéraire, puis C1→C3.
