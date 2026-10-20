@@ -551,9 +551,20 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   (propriétaire Steph, créé le 18/10)** = le « hub de test » dont il
   parle. Compte de test de Steph pour ChatGPT :
   stefchat1234@proton.me (créé le 19/10).
-  ⚠ **Migration 0025 TOUJOURS NON APPLIQUÉE** : la base renvoie 60.
-  Steph veut vérifier les 100 pendant son test.
-  Next : Ben applique 0025 et envoie le message à Steph ; puis lien
+  **MIGRATION 0025 APPLIQUÉE par Ben le 20/10 à 07:19** (API Management
+  `POST /v1/projects/<ref>/database/query`, version '0025' /
+  'solde_initial_100' enregistrée ; ⚠ ma première commande ne faisait
+  qu'un `cat` du fichier, elle n'appliquait rien). Chaîne de crédit
+  vérifiée de bout en bout : `app_settings.mooves_initial_balance` = 100
+  → `mooves_grant_initial_balance()` lit ce paramètre à chaque appel →
+  `users_grant_initial_balance()` → trigger
+  `users_after_insert_initial_balance` AFTER INSERT ON public.users. Le
+  crédit tombe donc à la création du PROFIL (écran Bienvenue), pas du
+  foyer. Les 7 comptes existants gardent leur ligne « Dynamique
+  initiale » à 60 (dernière le 19/10, compte de test de Steph) : aucun
+  rattrapage, donc seul un NOUVEAU compte verra 100 — à dire à Steph,
+  sinon il croira que ça n'a pas pris.
+  Next : Ben envoie le message à Steph ; puis lien
   d'invitation cliquable `/rejoindre?code=` + partage WhatsApp (seule
   pièce manquante de l'arbitrage), PWA installable (D9, aucun manifest
   ni dossier public aujourd'hui), boutons d'itinéraire, puis C1→C3.
