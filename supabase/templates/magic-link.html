@@ -1,0 +1,18 @@
+<!-- Mooveee — email de connexion (template Supabase « Magic Link »).
+     Source de vérité de ce qui est posé en prod sur le projet
+     chmijnxukwsfqlvaontf via l'API Management (config/auth,
+     mailer_templates_magic_link_content). Voir supabase/templates/README.md.
+     Variables disponibles : .Token, .ConfirmationURL, .Email, .SiteURL.
+     Le code et le lien ouvrent la même session et expirent ensemble (1 h). -->
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; color: #1f2d3d; max-width: 480px;">
+  <h2 style="font-size: 20px; margin: 0 0 16px;">Votre code de connexion Mooveee</h2>
+
+  <p style="margin: 0 0 8px; font-size: 15px;">Saisissez ce code dans l'application :</p>
+
+  <p style="font-size: 34px; font-weight: 700; letter-spacing: 8px; margin: 0 0 20px; font-family: 'SFMono-Regular', Menlo, Consolas, monospace;">{{ .Token }}</p>
+
+  <p style="margin: 0 0 20px; font-size: 15px;">Vous pouvez aussi <a href="{{ .ConfirmationURL }}" style="color: #0f766e;">vous connecter directement</a> depuis cet appareil.</p>
+
+  <p style="margin: 0 0 4px; font-size: 13px; color: #64748b;">Le code et le lien expirent dans une heure et ne servent qu'une fois.</p>
+  <p style="margin: 0; font-size: 13px; color: #64748b;">Si vous n'avez pas demandé cette connexion, ignorez ce message.</p>
+</div>

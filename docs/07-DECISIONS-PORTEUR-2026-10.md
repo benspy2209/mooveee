@@ -312,3 +312,142 @@ Pour Ben :
 
 Pièces à joindre : le présent document (export PDF) et
 `MOOVEEE_Instructions_Techniques_Partenaire_v4.docx`.
+
+---
+
+## G. Retour de test du 19/10/2026 (Stéphane) et traitement
+
+Stéphane a créé un compte de test (« Test mooveee », `stefchat1234@proton.me`,
+créé et connecté le 19/10) pour faire parcourir l'application par ChatGPT dans
+un navigateur partagé. Quatre points en sont ressortis.
+
+### G.1 Connexion par code — CORRIGÉ le 20/10/2026
+
+Symptôme signalé : l'écran demande un code, l'email reçu ne contient qu'un
+bouton « Sign in », sans code. Le lien fonctionne sur le téléphone qui reçoit
+l'email, mais pas quand on lit l'email sur un appareil et qu'on se connecte
+depuis un autre.
+
+Diagnostic : **deux causes**, pas une.
+
+1. Le template Supabase « Magic Link » était celui par défaut, en anglais,
+   avec `{{ .ConfirmationURL }}` seul. La variable `{{ .Token }}` n'y
+   figurait pas, donc aucun code n'était affiché.
+2. `mailer_otp_length` valait **8** côté serveur, alors que le champ de
+   saisie impose six chiffres (`pattern="[0-9]{6}"`, `maxLength={6}` dans
+   `src/routes/login.tsx`). Même avec le code dans l'email, la saisie aurait
+   été impossible. Ce second point n'était visible d'aucun écran.
+
+Correction : template français affichant le code en grand puis le lien en
+secours, sujet « Votre code de connexion Mooveee », `mailer_otp_length` aligné
+à 6. Le template est désormais versionné dans `supabase/templates/` avec sa
+procédure d'application : la configuration Auth d'un projet Supabase n'est pas
+une migration, elle ne se lisait nulle part dans le dépôt.
+
+Vérifié de bout en bout le 20/10 sur un compte réel : demande de code,
+réception de l'email français avec un code à six chiffres, puis échange de ce
+code contre une session (`POST /auth/v1/verify`, jetons émis). Aucune
+modification du code de l'application n'a été nécessaire : le front attendait
+déjà six chiffres.
+
+Deux limites à connaître pour les tests : un email par minute maximum vers la
+même adresse (`smtp_max_frequency = 60`) et trente emails par heure pour le
+projet. Le code vaut une heure.
+
+### G.2 Invitation par WhatsApp — faisable, un arbitrage à rendre d'abord
+
+Techniquement court. Le code d'adhésion existe déjà (`hubs.join_code`, affiché
+dans l'écran Hubs, résolu par le RPC `hub_for_join_code`). Il manque une route
+publique d'arrivée qui pré-remplit le code et un bouton de partage ouvrant
+WhatsApp avec le message prêt. Aucun compte WhatsApp Business, aucune API, rien
+à payer : un lien `wa.me` suffit, et il sert aussi pour SMS et email.
+
+**Ce qu'il faut trancher avant de l'écrire.** Un code d'adhésion dans un
+message WhatsApp devient transférable à l'infini : capture d'écran, groupe de
+classe, transfert. Aujourd'hui, quiconque détient le code entre dans le hub et
+voit les trajets publiés. Le rendre partageable en un geste multiplie cette
+surface. Trois options, par ordre de solidité :
+
+- lien nominatif à usage unique et expirant, émis par un administrateur du hub
+  (le plus sûr, le plus de travail) ;
+- code de hub partageable mais entrée en attente de validation par un
+  administrateur avant d'accéder aux trajets (compatible avec l'interdit
+  numéro 8 : ce n'est pas une dégradation de fonction, c'est un contrôle
+  d'entrée) ;
+- code partageable et entrée immédiate, comme aujourd'hui (le plus simple, le
+  plus exposé).
+
+Recommandation : la deuxième pour le pilote. Décision attendue de Stéphane.
+
+### G.3 Solde initial à 100 — migration prête, PAS encore appliquée
+
+Stéphane confirme le 19/10 : « on peut mettre 100 au départ ». C'est la
+décision P12 déjà consignée, et la migration `0025_solde_initial_100.sql` est
+écrite depuis le 11/10. Elle n'est **pas appliquée** : la base renvoie encore
+60 (`select value from app_settings where key = 'mooves_initial_balance'`).
+
+À appliquer par Ben. Les comptes de test déjà crédités à 60 gardent leur ligne :
+aucun rattrapage prévu, à trancher avant les premières familles si l'on veut
+l'égalité stricte.
+
+### G.4 Carte pour les hubs et les lieux de rendez-vous — déjà à moitié fait
+
+La recherche de lieux publics s'appuie déjà sur Photon (OpenStreetMap, serveurs
+européens, sans clé), dans `src/lib/places.ts` et `src/components/PlaceField.tsx`,
+avec les coordonnées stockées dans `places`. Ce qui manque n'est pas la
+recherche, c'est l'affichage.
+
+Trois niveaux, de l'immédiat au lourd :
+
+1. **Un lien d'itinéraire** sur chaque lieu et chaque hub, qui ouvre
+   l'application de cartes du téléphone (Google Maps, Apple Plans, Waze). Les
+   coordonnées sont déjà là, c'est une URL à construire. Aucune donnée ne
+   quitte l'application, c'est l'utilisateur qui ouvre son outil.
+2. **Une carte affichée** dans l'application (MapLibre et tuiles
+   OpenStreetMap, sans clé) pour situer les hubs et les points de
+   rendez-vous. Travail moyen, cohérent avec l'hébergement européen.
+3. **L'API Google Maps**, qui suppose une clé, une facturation à l'usage et
+   l'envoi des requêtes de localisation à Google, donc hors Union
+   européenne. Cela contredit le choix d'un hébergement européen fait pour ce
+   projet et alourdit la DPIA, qui n'est pas validée.
+
+Recommandation : le niveau 1 tout de suite, le niveau 2 après le pilote, le
+niveau 3 jamais sans avis juridique.
+
+Dans les trois cas, l'interdit numéro 6 tient : aucune position d'enfant n'est
+stockée, aucun historique de trajet réel. On affiche des lieux publics déclarés
+par les parents, jamais le déplacement d'une personne.
+
+### G.5 Brouillon de réponse à Stéphane
+
+> Salut Stéphane,
+>
+> La connexion est corrigée. Il y avait deux problèmes : l'email ne contenait
+> pas le code, et le serveur générait un code à huit chiffres alors que
+> l'écran n'en accepte que six. L'email arrive maintenant en français avec le
+> code en grand, et le lien reste dessous pour qui lit ses mails sur le même
+> appareil. Testé de bout en bout. Tu peux refaire tourner le test dans le
+> navigateur partagé. Deux détails utiles : un seul email par minute vers la
+> même adresse, et le code vaut une heure.
+>
+> Les 100 Mooves au départ : c'est noté, je le pose en base.
+>
+> L'invitation par WhatsApp : c'est court à faire, un lien suffit, sans API ni
+> compte professionnel. Avant de l'écrire j'ai besoin d'un arbitrage de ta
+> part. Un code d'adhésion envoyé par WhatsApp se transfère ensuite sans
+> limite, capture d'écran comprise, et aujourd'hui quiconque a le code entre
+> dans le hub et voit les trajets. Je propose que le code reste partageable
+> mais que l'entrée d'une nouvelle famille attende la validation d'un
+> responsable du hub. Ça garde toutes les fonctions familiales, ça ajoute
+> seulement une porte. Dis-moi si tu valides.
+>
+> Les cartes : la recherche d'adresses marche déjà avec OpenStreetMap, et
+> c'est volontaire, les serveurs sont européens et il n'y a pas de clé à
+> payer. Ce qui manque c'est l'affichage. Je peux ajouter tout de suite un
+> bouton d'itinéraire sur chaque lieu et chaque hub, qui ouvre Google Maps ou
+> Plans sur le téléphone. Une carte intégrée dans l'application, je la ferais
+> après le pilote. Passer à l'API Google elle-même, je ne le conseille pas :
+> cela envoie les recherches de localisation hors d'Europe, alors qu'on a
+> choisi un hébergement européen et que la DPIA n'est pas validée.
+>
+> Benjamin
