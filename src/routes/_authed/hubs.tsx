@@ -889,13 +889,13 @@ function HubDetail({
       <h3 className="mt-6 text-sm font-medium text-gray-700">Membres</h3>
       <ul className="mt-2 divide-y divide-gray-100">
         {validatedMembers.map((m) => (
-          <li
+          <ValidatedMemberRow
             key={m.user_id}
-            className="flex items-center justify-between py-3 text-sm"
-          >
-            <span className="text-gray-900">{memberDisplayName(m)}</span>
-            <span className="text-gray-500">{m.is_admin ? 'Admin' : ''}</span>
-          </li>
+            hubId={hubId}
+            member={m}
+            canRemove={isAdmin && m.user_id !== userId && !m.is_admin}
+            onChanged={load}
+          />
         ))}
       </ul>
 
@@ -1464,6 +1464,102 @@ function MeetingPointsSection({
         </p>
       )}
     </>
+  )
+}
+
+// Retrait d'un membre validé : acte HUMAIN d'un responsable du hub, en
+// deux temps pour éviter le clic malheureux. La base l'autorise déjà
+// (policy hub_members_admin_delete) ; seule l'interface manquait.
+// Un responsable ne peut retirer ni lui-même ni un autre responsable :
+// il faut d'abord retirer le rôle, ce qui laisse une décision explicite
+// entre deux personnes plutôt qu'un bouton qui démet un pair.
+// Le retrait coupe l'accès aux trajets et aux membres (auth_hub_ids ne
+// retient que les adhésions validées) sans toucher au foyer, aux enfants
+// ni à l'historique d'entraide de la famille.
+function ValidatedMemberRow({
+  hubId,
+  member,
+  canRemove,
+  onChanged,
+}: {
+  hubId: string
+  member: HubMemberProfile
+  canRemove: boolean
+  onChanged: () => void
+}) {
+  const [confirming, setConfirming] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function remove() {
+    setError(null)
+    setSubmitting(true)
+
+    const { error: deleteError } = await supabase
+      .from('hub_members')
+      .delete()
+      .eq('hub_id', hubId)
+      .eq('user_id', member.user_id)
+
+    if (deleteError) {
+      setError(deleteError.message)
+      setSubmitting(false)
+      setConfirming(false)
+      return
+    }
+
+    onChanged()
+  }
+
+  return (
+    <li className="py-3 text-sm">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-gray-900">{memberDisplayName(member)}</span>
+        <div className="flex items-center gap-2">
+          {member.is_admin && <span className="text-gray-500">Admin</span>}
+          {canRemove && !confirming && (
+            <button
+              type="button"
+              onClick={() => setConfirming(true)}
+              className="rounded-md border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+            >
+              Retirer
+            </button>
+          )}
+          {canRemove && confirming && (
+            <>
+              <button
+                type="button"
+                onClick={() => setConfirming(false)}
+                disabled={submitting}
+                className="rounded-md border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={() => void remove()}
+                disabled={submitting}
+                className="rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitting ? 'Retrait…' : 'Confirmer le retrait'}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+      {confirming && !error && (
+        <p className="mt-2 text-sm text-gray-500">
+          Cette famille n'aura plus accès aux trajets ni aux membres de ce hub.
+          Elle pourra redemander à rejoindre avec le code.
+        </p>
+      )}
+      {error && (
+        <p className="mt-2 rounded-md bg-red-50 p-3 text-sm text-red-800">
+          Une erreur est survenue : {error}
+        </p>
+      )}
+    </li>
   )
 }
 
