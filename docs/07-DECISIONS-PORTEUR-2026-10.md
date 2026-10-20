@@ -741,3 +741,134 @@ manque, qui bloque l'assistant et qui sert immédiatement sans lui.
 Ensuite le socle d'actions, utile seul. Puis un seul parcours écrit de
 bout en bout, mesuré. La voix et la tarification après, avec des
 chiffres réels plutôt que des hypothèses.
+
+---
+
+## J. Deux précisions de Stéphane (20/10/2026) : données et voix locale
+
+Deux pistes proposées par le porteur, à intégrer à l'évaluation. Aucune
+demande de développement pour le pilote. Les deux sont justes et vont
+plus loin que la section H ; elles appellent chacune des raffinements et
+une limite honnête.
+
+### J.1 Ne transmettre que des références et des résultats
+
+**Principe retenu.** Les noms, adresses, horaires précis et le calcul de
+compatibilité restent dans Mooveee. Le modèle ne reçoit que des
+identifiants opaques et des **résultats** de calcul, jamais les données
+qui ont servi à les produire. Il raisonne sur une structure, l'application
+détient le sens.
+
+Cette formulation est meilleure que la pseudonymisation des seuls
+prénoms décrite en H.2 : elle couvre toutes les catégories
+identifiantes, pas une seule. Elle devient la règle.
+
+**Le point que Stéphane soulève et qui est le vrai risque : les réponses
+des outils.** On pense naturellement à nettoyer la phrase du parent. Or
+les sorties sont bien plus bavardes : une recherche de trajet renvoie
+aujourd'hui des libellés d'origine et de destination (« École
+Saint-Joseph », « rue des Tilleuls »), une commune, des horaires exacts.
+Sans traitement, on masquerait l'entrée pour tout divulguer à la sortie.
+
+**Règle : le nettoyage est bidirectionnel et s'applique à chaque sortie
+d'outil, pas seulement à l'entrée.** Un outil qui n'a pas de sortie
+nettoyée n'est pas exposable à l'assistant.
+
+**Ce qui peut sortir et ce qui ne peut pas :**
+
+| Catégorie | Transmis au modèle | Forme |
+| --- | --- | --- |
+| Personnes, enfants | non | `<enfant_1>`, `<parent_2>` |
+| Lieux, adresses | non | `<lieu_3>` |
+| Commune, code postal | **non** | rien |
+| Coordonnées géographiques | non | rien |
+| Distance, durée | oui | valeur dérivée, « environ 4 km » |
+| Compatibilité de deux trajets | oui | **résultat** calculé chez nous |
+| Date et heure | oui | nécessaires au raisonnement |
+| Texte libre saisi par un parent | **non** | voir ci-dessous |
+
+**Deux limites à assumer.**
+
+*La ré-identification par recoupement.* Même avec des jetons, « enfant_1,
+mercredi 17 h, Rhode-Saint-Genèse » redevient identifiable dans une
+petite commune. C'est pourquoi la commune et les coordonnées ne sortent
+pas, même sous forme approchée. Les distances remplacent les lieux.
+
+*Les champs de texte libre.* Le nom d'une activité (« Tennis de Jules »),
+le message joint à une demande, une note : un remplacement fondé sur la
+liste des prénoms connus ne couvre ni les diminutifs ni les fautes de
+frappe. Conclusion prudente : **les champs libres ne sont pas envoyés au
+modèle.** L'assistant travaille sur la structure, pas sur la prose des
+parents.
+
+**Conséquence favorable pour l'AIPD.** Avec cette architecture, le
+fournisseur reçoit si peu qu'il ne peut raisonnablement pas réidentifier
+une famille. Le risque est réduit à la source, pas géré par contrat. Cela
+rend l'interdit 7 tenable à la lettre plutôt qu'au prix d'une
+interprétation, et cela rend le choix du fournisseur moins déterminant,
+sans le rendre indifférent.
+
+**Point de conception.** La table de correspondance jeton vers
+identifiant réel vit sur l'appareil, le temps de la conversation. Elle
+n'est ni persistée côté serveur, ni envoyée, ni journalisée. La
+conserver quelque part recréerait exactement le lien qu'on cherche à
+supprimer.
+
+### J.2 Voix : parcours guidé et transcription sur l'appareil
+
+**Principe retenu, et à inscrire comme une règle :** si la transcription
+sur l'appareil n'est pas disponible, on reste à l'écrit. **Aucune bascule
+automatique vers un service de transcription extérieur.** Une bascule
+silencieuse enverrait la voix d'un parent, et le prénom d'un enfant, à
+un tiers sans décision explicite.
+
+**Ce qui est techniquement possible aujourd'hui.** Faire tourner un
+modèle de transcription dans le navigateur via WebAssembly est réaliste
+pour des phrases courtes. Trois réserves concrètes :
+
+- **le poids.** Le plus petit modèle utilisable en français pèse
+  plusieurs dizaines de mégaoctets, et la qualité y est moyenne ; un
+  modèle confortable dépasse largement cela. Le téléchargement proposé
+  par Stéphane est donc justifié, mais ce n'est pas un détail : il faut
+  l'annoncer, le faire en Wi-Fi, et jamais à l'insu du parent.
+- **la vitesse.** Sur un téléphone récent, c'est fluide. Sur un appareil
+  ancien, c'est lent et l'appareil chauffe. Le parcours guidé doit donc
+  **mesurer** sur l'appareil réel, pas seulement demander une
+  autorisation. Une transcription d'essai chronométrée tranche mieux
+  qu'une case à cocher.
+- **la persistance.** Sur iPhone, le stockage d'une application web peut
+  être purgé après des semaines sans usage. Le modèle disparu doit être
+  détecté, et son re-téléchargement proposé, jamais déclenché seul sur
+  données mobiles.
+
+**Parcours guidé au premier usage, dans cet ordre :** expliquer, tester
+la faisabilité sur l'appareil, proposer le téléchargement en annonçant
+le poids, demander l'autorisation du micro, faire un essai à blanc dont
+le parent voit la transcription avant tout envoi, puis activer. À chaque
+étape, l'abandon ramène à l'écrit sans dégrader quoi que ce soit.
+
+**Une piste plus simple, à tester d'abord.** La dictée du clavier
+système, sur iPhone comme sur Android, écrit dans un champ texte
+ordinaire. Elle est déjà installée, gratuite, traitée sur l'appareil pour
+beaucoup de langues sur iPhone, et ne demande **aucun développement ni
+téléchargement** de notre part. Elle ne couvre pas le mains libres, mais
+elle règle l'essentiel du confort de saisie pour un coût nul. À mettre
+en premier, avant d'investir dans un modèle embarqué.
+
+Rappel de la section I.4 : rien de tout cela ne lève la limite de
+l'écran verrouillé, qui relève de l'application native.
+
+### J.3 Effet sur la vérification de protection des données
+
+Ces deux décisions allègent le dossier :
+
+- le traitement par un tiers ne porte plus sur des données personnelles
+  identifiables, mais sur des jetons et des résultats de calcul ;
+- la voix n'est pas transmise, ou le service n'est pas activé ;
+- aucune donnée d'enfant ne quitte l'application, ce qui satisfait
+  l'interdit 7 sans aménagement.
+
+Restent à documenter dans l'AIPD : la table de correspondance éphémère
+sur l'appareil, le journal des actions confirmées, et le modèle de
+transcription stocké localement. L'avis professionnel reste requis, et
+reste le chemin critique.
