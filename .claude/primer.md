@@ -568,3 +568,43 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   d'invitation cliquable `/rejoindre?code=` + partage WhatsApp (seule
   pièce manquante de l'arbitrage), PWA installable (D9, aucun manifest
   ni dossier public aujourd'hui), boutons d'itinéraire, puis C1→C3.
+- 20/10 (3) — les deux pièces promises à Steph sont faites (commits
+  b9270d6 et 01b23d4, NON poussés) :
+  **LIEN D'INVITATION PARTAGEABLE** : `<origine>/rejoindre?code=ABC123`.
+  Choix de conception : la page NE réimplémente PAS l'adhésion, elle
+  mémorise le code (`src/lib/invitation.ts`, localStorage, péremption
+  2 h, format validé) et renvoie vers /hubs où `JoinHubForm` ouvre le
+  formulaire, pré-remplit le code et cherche le hub → une seule
+  implémentation du parcours, impossible de sauter le Pacte ou la
+  validation. Reprise après connexion dans index.tsx (lien magique) ET
+  login.tsx (code saisi) ; bannière de rappel dans _authed.tsx pour que
+  le détour profil → foyer ne finisse pas en cul-de-sac (masquée sur
+  /hubs) ; bloc de partage côté responsable dans hubs.tsx (WhatsApp via
+  `wa.me` sans API ni compte pro, copier le lien, copier le message,
+  lien en clair si le presse-papiers est refusé ; origine lue après
+  montage, jamais au prérendu). Le rôle anon ne résout aucun hub : un
+  lien qui fuite n'apprend rien. **Prouvé dans Chrome de bout en bout**
+  sur le serveur local : lien → login → code reçu par email → /hubs avec
+  NDD284 pré-rempli, TC WIMBLEDON trouvé, Pacte affiché, bouton
+  désactivé tant que la case n'est pas cochée. Aucune demande réelle
+  créée.
+  **PWA INSTALLABLE (D9)** : il n'y avait ni dossier `public/`, ni
+  manifeste, ni icône. Ajoutés : `public/manifest.webmanifest`
+  (standalone, couleurs du thème), `public/icones/` (192, 512, 512
+  maskable, apple-touch 180, favicon 32 + .ico) rendues avec Playwright
+  depuis le wordmark Fraunces (le « e » italique clair, dégradé lagoon →
+  encre), les balises dans `__root.tsx` (dont les meta Apple, iOS
+  ignorant le manifeste), et `public/sw.js` = service worker minimal
+  enregistré **en production seulement**, qui gère `fetch` sans RIEN
+  mettre en cache (exigence Chrome pour proposer l'installation ; aucun
+  cache volontairement, une vue périmée de trajets tromperait un
+  parent). `<html lang="en">` corrigé en `fr`. Vérifié dans Chrome sur
+  le build : worker activé, manifeste lu, 3 icônes, tous les fichiers en
+  200.
+  ⚠ Après le premier déploiement : vérifier que Vercel sert
+  `manifest.webmanifest` en `application/manifest+json` (le serveur
+  local renvoie `application/octet-stream`, Chrome l'a lu quand même).
+  Pas de `vercel.json` dans ce projet, volontairement pas créé pour ne
+  pas perturber la détection du framework.
+  Next : Ben pousse (= déploiement) puis envoie le message à Steph avec
+  le lien d'invitation réel ; puis boutons d'itinéraire, puis C1→C3.
