@@ -568,3 +568,176 @@ le Pacte. Un RPC transactionnel supprime ce cas.
 
 Rien de tout cela n'entre dans le pilote de novembre, comme Stéphane le
 dit lui-même.
+
+---
+
+## I. Assistant IA : les trois questions de Stéphane (20/10/2026)
+
+Complément à la section H. Stéphane demande l'intégration, la fiabilité
+et le budget, plus les limites de la voix sur téléphone.
+
+### I.0 Le constat qui commande tout : il n'y a pas de notification
+
+Son exemple est un imprévu : « je ne peux plus conduire demain ».
+L'assistant retrouve l'activité, cherche, prépare, et… prévient qui ?
+
+État réel de la base : il existe une table `messages` (messagerie interne
+par foyer, hub ou trajet) et une table `notification_preferences`
+(maximum par jour, par semaine, heures calmes, canal). **Il n'existe
+aucun moteur d'envoi** : ni notification poussée, ni email, ni SMS. Une
+demande déposée n'est vue que si l'autre parent ouvre l'application.
+
+Conséquence : pour un imprévu du jour, un assistant sans notification ne
+sert à rien. **La pièce manquante n'est pas l'intelligence artificielle,
+c'est la notification.** Elle est déjà au plan sous C13 ; elle devient le
+prérequis du cas d'usage que Stéphane décrit, et elle a de la valeur
+seule, sans aucun assistant.
+
+### I.1 Intégration : ce qui est connectable, ce qui ne l'est pas
+
+**Déjà connectable sans développement** — toutes les lectures. Les
+tables passent par PostgREST sous RLS, et les fonctions de lecture
+existent déjà : `hub_trips_view`, `hub_member_profiles`,
+`trip_open_in_my_hubs`, `hub_trip_children_count`, `hub_for_join_code`,
+`trip_children_aboard`. Un assistant peut donc chercher une possibilité
+de trajet dès aujourd'hui, avec les droits du parent.
+
+**Une seule écriture est déjà exposée proprement** :
+`accept_trip_request`, transactionnelle, idempotente, qui vérifie
+l'appartenance au foyer conducteur en première instruction. C'est le
+modèle à suivre pour les autres.
+
+**À développer, une action par outil** :
+
+| Action | État | Remarque |
+| --- | --- | --- |
+| Créer une activité récurrente + générer les trajets | écrit par l'interface | la génération est déjà idempotente |
+| Se désister d'un trajet | écrit par l'interface | doit libérer la place et tracer |
+| Demander une place | insert direct | besoin d'une clé d'intention |
+| Rejoindre un hub | **deux** inserts client | défaut connu : membre sans Pacte si le second échoue |
+| Préparer une invitation | aucune écriture | déjà fait, c'est un lien |
+| Notifier | **inexistant** | voir I.0 |
+
+**Fournisseur.** Critère premier : traitement en Union européenne sous
+contrat de sous-traitance, et appels de fonctions natifs. Mistral
+(France) est le choix le plus simple à défendre dans l'AIPD. Les grands
+modèles américains restent possibles via une région européenne, au prix
+d'un contrat plus lourd. Dans tous les cas, prévoir une couche
+d'abstraction : le fournisseur changera.
+
+**Où tourne l'appel.** Dans une Edge Function Supabase, jamais depuis le
+navigateur : la clé ne doit pas se trouver dans le bundle. Précédent
+dans le projet : `access-code-login`.
+
+### I.2 Fiabilité et confidentialité
+
+**Les droits, à chaque action.** Règle absolue : l'Edge Function agit
+avec le jeton du parent, jamais avec la clé `service_role`. Avec la clé
+de service, toute la RLS tomberait et il faudrait réimplémenter les
+droits dans le code de l'assistant — exactement ce qu'il ne faut pas
+faire. Avec le jeton du parent, la base refuse d'elle-même tout ce qui
+dépasse.
+
+**Limiter les données transmises.** Pseudonymisation sur l'appareil
+(section H.2) : le modèle reçoit des jetons, jamais des prénoms. On
+n'envoie jamais une liste complète, seulement les éléments nécessaires à
+la décision en cours.
+
+**Les ambiguïtés se tranchent dans l'application, pas dans le modèle.**
+Le modèle propose un jeton ; l'application vérifie qu'il correspond à
+exactement une personne ou un trajet. Zéro correspondance ou plusieurs :
+on demande une précision. Le modèle ne choisit jamais entre deux
+personnes.
+
+**La confirmation est structurelle.** Le modèle ne produit qu'une
+intention. L'application affiche le résumé et n'appelle le RPC qu'après
+le geste du parent. Même si le modèle se trompe ou qu'on lui souffle une
+consigne malveillante, il ne peut rien déclencher seul.
+
+**Les trois états demandés existent déjà** dans `trip_requests.status` :
+`en_attente`, `accepte`, `refuse`, plus `annule` et `expire`. Il n'y a
+rien à inventer, seulement à ne jamais confondre les mots dans
+l'interface.
+
+**Doubles envois en cas de coupure.** Chaque intention porte une clé
+unique, et le RPC est idempotent sur cette clé
+(`on conflict do nothing`, puis `get diagnostics` immédiat pour ne
+déclencher les effets que si une ligne a bien été insérée). C'est
+déjà la leçon tirée sur `accept_trip_request` et l'index
+`trip_requests_accepted_unique` : on la réapplique, on n'invente rien.
+
+### I.3 Budget
+
+**Ordres de grandeur, pas devis.** Les trois postes sont distincts.
+
+*Travail initial*, par blocs indépendants et utiles séparément :
+
+| Bloc | Ordre de grandeur | Utile sans assistant |
+| --- | --- | --- |
+| Notifications (C13, prérequis) | 5 à 8 jours | oui, indispensable |
+| Socle d'actions : RPC, idempotence, journal | 6 à 10 jours | oui |
+| Pseudonymisation + couche fournisseur | 3 à 5 jours | non |
+| Premier parcours écrit complet | 8 à 12 jours | non |
+| Voix en PWA | 5 à 10 jours | non |
+
+*Maintenance* : les modèles et leurs interfaces changent plusieurs fois
+par an. Prévoir une révision régulière, plus la veille sur le contrat du
+fournisseur. C'est un coût récurrent, pas un reste à finir.
+
+*Coût d'usage, par demande complète.* Une demande suppose plusieurs
+allers-retours : comprendre, chercher, proposer, confirmer. En ordre de
+grandeur, quelques centimes la demande en écrit, et de l'ordre du double
+avec transcription vocale et réponse parlée. Ces chiffres sont à
+confirmer au moment du choix, les tarifs bougent vite.
+
+**Sur l'option à 1 ou 2 € par mois.** Avec dix demandes par mois et par
+famille, on est à l'équilibre, pas au large. Je ne promettrais pas ce
+prix avant d'avoir mesuré. Et deux réserves de fond :
+
+- toute monétisation relève de la partie C de ce document, en attente
+  d'examen professionnel ; rien ne s'active avant ;
+- une option payante par famille crée une inégalité d'accès, ce que le
+  projet évite par ailleurs (fonds de solidarité, interdit 8).
+
+**La voie institutionnelle est plus saine et déjà conforme.** Inclure
+l'assistant dans un contrat avec un club ou une commune, facturé par
+palier d'usage, respecte l'interdit 3 : jamais de ligne indexée sur le
+trajet individuel. C'est la piste que je recommanderais.
+
+**Mesurer** : oui, et dès le prototype. On journalise les jetons
+consommés par demande et par étape. C'est typiquement un cas où l'on
+mesure avant de tarifer, pas l'inverse.
+
+### I.4 Limites de la voix sur téléphone
+
+| Situation | Android (Chrome) | iPhone (Safari) |
+| --- | --- | --- |
+| Dicter, application ouverte | oui | oui, après un geste |
+| Reconnaissance intégrée au navigateur | oui, mais l'audio part chez Google | partielle, capricieuse en application installée |
+| Enregistrer puis transcrire nous-mêmes | oui | oui |
+| Application en arrière-plan | micro coupé | micro coupé |
+| **Écran verrouillé** | **non** | **non** |
+| Mot de réveil, « Hey Mooveee » | **non** | **non** |
+
+À retenir : **une application web ne peut pas écouter écran verrouillé,
+ni sur Android ni sur iPhone.** Le parent doit ouvrir l'application et
+appuyer sur un bouton. C'est gênant précisément dans le cas visé, où il
+est souvent en déplacement.
+
+L'issue est l'encapsulage natif déjà prévu pour l'App Store : accès au
+micro en arrière-plan sous permission explicite, et surtout raccourcis
+Siri et actions Android, qui donnent la vraie expérience mains libres.
+Dans l'intervalle, la lecture à voix haute des réponses, elle,
+fonctionne partout sans réserve.
+
+Note de sécurité routière, qui n'est pas un détail au vu du cas d'usage :
+viser l'usage au volant engage une responsabilité. Mieux vaut assumer
+que l'assistant s'utilise à l'arrêt.
+
+### I.5 Ce que je recommande
+
+Ne pas commencer par l'assistant. Commencer par la notification, qui
+manque, qui bloque l'assistant et qui sert immédiatement sans lui.
+Ensuite le socle d'actions, utile seul. Puis un seul parcours écrit de
+bout en bout, mesuré. La voix et la tarification après, avec des
+chiffres réels plutôt que des hypothèses.
