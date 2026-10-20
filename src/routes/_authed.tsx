@@ -17,6 +17,7 @@ import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { fetchPendingDropoffReminders } from '@/lib/dropoff-reminders'
 import { fetchUpcomingTripReminders } from '@/lib/concierge'
+import { forgetInvitation, readInvitation } from '@/lib/invitation'
 
 import type { DropoffReminder } from '@/lib/dropoff-reminders'
 import type { TripReminder } from '@/lib/concierge'
@@ -58,10 +59,56 @@ function AuthedLayout() {
   return (
     <div className="with-tabbar">
       <AppHeader />
+      <HubInvitationBanner pathname={pathname} />
       <DropoffReminderBanner userId={session.user.id} />
       <TripReminderBanner userId={session.user.id} />
       <Outlet />
       <AppTabBar pathname={pathname} />
+    </div>
+  )
+}
+
+// Invitation à un hub reçue par lien, en attente de traitement.
+//
+// Le parcours d'inscription peut passer par le profil puis le foyer avant
+// d'arriver aux hubs : sans ce rappel, la personne qui a cliqué un lien
+// WhatsApp se retrouverait sur son foyer sans savoir où aller. La
+// bannière reste tant que la demande n'est pas envoyée, et disparaît
+// d'elle-même sur l'écran Hubs, où le code est déjà pré-rempli.
+function HubInvitationBanner({ pathname }: { pathname: string }) {
+  const [invitation, setInvitation] = useState(() => readInvitation())
+
+  useEffect(() => {
+    setInvitation(readInvitation())
+  }, [pathname])
+
+  if (!invitation || pathname === '/hubs') return null
+
+  return (
+    <div className="border-b border-teal-200 bg-teal-50 px-4 py-3">
+      <div className="mx-auto flex w-full max-w-lg items-start justify-between gap-3">
+        <div className="text-sm text-teal-900">
+          <p className="font-medium">Invitation à rejoindre un hub.</p>
+          <p className="mt-0.5">
+            Le code {invitation.code} vous attend dans l'écran Hubs.
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
+          <Link to="/hubs" className="text-sm font-medium text-teal-800">
+            Continuer
+          </Link>
+          <button
+            type="button"
+            onClick={() => {
+              forgetInvitation()
+              setInvitation(null)
+            }}
+            className="text-sm text-teal-700 hover:text-teal-900"
+          >
+            Ignorer
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -98,7 +145,11 @@ function AppTabBar({ pathname }: { pathname: string }) {
                 }`}
               >
                 <span className="tab-glyph">
-                  <Icon size={21} strokeWidth={active ? 2.4 : 1.9} aria-hidden />
+                  <Icon
+                    size={21}
+                    strokeWidth={active ? 2.4 : 1.9}
+                    aria-hidden
+                  />
                 </span>
                 {item.label}
               </Link>

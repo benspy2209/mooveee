@@ -2,6 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
+import {
+  forgetInvitation,
+  invitationLink,
+  invitationMessage,
+  readInvitation,
+  whatsappShareUrl,
+} from '@/lib/invitation'
 import { fetchConciergeSettings, hubSoloIsStagnant } from '@/lib/concierge'
 
 import type { ConciergeSettings } from '@/lib/concierge'
@@ -847,14 +854,7 @@ function HubDetail({
       </p>
 
       {isAdmin && (
-        <div className="mt-4 rounded-md border border-blue-100 bg-blue-50 p-4">
-          <p className="text-sm text-blue-900">
-            Code d’adhésion à partager avec les familles :{' '}
-            <span className="font-mono text-base font-semibold tracking-widest">
-              {hub.join_code}
-            </span>
-          </p>
-        </div>
+        <ShareInvitation hubName={hub.name} joinCode={hub.join_code} />
       )}
 
       {soloStagnant && (
@@ -1467,6 +1467,103 @@ function MeetingPointsSection({
   )
 }
 
+// Partage de l'invitation par un responsable du hub.
+//
+// Le lien transporte le code d'adhésion, rien de plus : la personne devra
+// se connecter, accepter le Pacte de Hub, et attendre qu'un responsable
+// valide sa demande. Le code reste affiché pour qui préfère le dicter.
+//
+// WhatsApp passe par wa.me, qui ouvre l'application installée sur mobile
+// et WhatsApp Web sur ordinateur : aucune interface de programmation,
+// aucun compte professionnel, aucune donnée transmise à WhatsApp par
+// nous — c'est la personne qui choisit le destinataire dans son propre
+// téléphone. Le même texte sert pour un SMS ou un email.
+function ShareInvitation({
+  hubName,
+  joinCode,
+}: {
+  hubName: string
+  joinCode: string
+}) {
+  const [copied, setCopied] = useState<'lien' | 'message' | null>(null)
+  // `window` n'existe pas au prérendu : l'origine est lue après montage,
+  // donc le lien n'est jamais construit pendant le rendu serveur.
+  const [origin, setOrigin] = useState('')
+
+  useEffect(() => {
+    setOrigin(window.location.origin)
+  }, [])
+
+  const link = origin ? invitationLink(joinCode, origin) : ''
+  const message = origin ? invitationMessage(hubName, link) : ''
+
+  async function copy(what: 'lien' | 'message') {
+    if (!origin) return
+    const text = what === 'lien' ? link : message
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(what)
+    } catch {
+      // Presse-papiers refusé (contexte non sécurisé, permission) : le
+      // lien reste sélectionnable à la main juste en dessous.
+      setCopied(null)
+    }
+  }
+
+  return (
+    <div className="mt-4 rounded-md border border-blue-100 bg-blue-50 p-4">
+      <p className="text-sm text-blue-900">
+        Invitez une famille en partageant ce lien. Vous validerez ensuite sa
+        demande avant qu'elle ne voie les trajets.
+      </p>
+
+      <p className="mt-2 text-sm text-blue-900">
+        Code d'adhésion :{' '}
+        <span className="font-mono text-base font-semibold tracking-widest">
+          {joinCode}
+        </span>
+      </p>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {origin && (
+          <a
+            href={whatsappShareUrl(message)}
+            target="_blank"
+            rel="noreferrer"
+            className="btn-lagoon px-3.5 py-1.5 text-sm font-semibold"
+          >
+            Partager par WhatsApp
+          </a>
+        )}
+        <button
+          type="button"
+          onClick={() => void copy('lien')}
+          className="rounded-md border border-blue-200 bg-white px-3.5 py-1.5 text-sm font-medium text-blue-800 hover:bg-blue-50"
+        >
+          Copier le lien
+        </button>
+        <button
+          type="button"
+          onClick={() => void copy('message')}
+          className="rounded-md border border-blue-200 bg-white px-3.5 py-1.5 text-sm font-medium text-blue-800 hover:bg-blue-50"
+        >
+          Copier le message
+        </button>
+      </div>
+
+      {copied && (
+        <p className="mt-2 text-sm text-blue-800">
+          {copied === 'lien' ? 'Lien copié.' : 'Message copié.'}
+        </p>
+      )}
+
+      {origin && (
+        <p className="mt-2 break-all font-mono text-xs text-blue-700">{link}</p>
+      )}
+    </div>
+  )
+}
+
 // Retrait d'un membre validé : acte HUMAIN d'un responsable du hub, en
 // deux temps pour éviter le clic malheureux. La base l'autorise déjà
 // (policy hub_members_admin_delete) ; seule l'interface manquait.
@@ -1674,15 +1771,14 @@ function JoinHubForm({
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  async function search(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  const runSearch = useCallback(async (rawCode: string) => {
     setError(null)
     setNotFound(false)
     setFoundHub(null)
     setSearching(true)
 
     const { data, error: rpcError } = await supabase.rpc('hub_for_join_code', {
-      p_code: code,
+      p_code: rawCode,
     })
 
     setSearching(false)
@@ -1697,7 +1793,26 @@ function JoinHubForm({
       return
     }
     setFoundHub(hub)
+  }, [])
+
+  async function search(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    await runSearch(code)
   }
+
+  // Invitation reçue par lien : le formulaire s'ouvre avec le code déjà
+  // rempli et le hub déjà cherché. La personne n'a plus qu'à lire le
+  // Pacte et demander à rejoindre — le lien ne saute aucune étape.
+  const invitationHandled = useRef(false)
+  useEffect(() => {
+    if (invitationHandled.current) return
+    const invitation = readInvitation()
+    if (!invitation) return
+    invitationHandled.current = true
+    setOpen(true)
+    setCode(invitation.code)
+    void runSearch(invitation.code)
+  }, [runSearch])
 
   async function join() {
     if (!foundHub) return
@@ -1730,6 +1845,9 @@ function JoinHubForm({
       setSubmitting(false)
       return
     }
+
+    // La demande est partie : l'invitation a joué son rôle.
+    forgetInvitation()
 
     setMessage(
       `Demande envoyée pour « ${foundHub.name} ». Un administrateur du hub doit maintenant la valider.`,

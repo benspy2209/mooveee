@@ -1,5 +1,6 @@
 import { Navigate, createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@/lib/auth'
+import { readInvitation } from '@/lib/invitation'
 
 export const Route = createFileRoute('/')({ component: Home })
 
@@ -18,5 +19,11 @@ function Home() {
     )
   }
 
-  return <Navigate to={session ? '/foyer' : '/login'} />
+  if (!session) {
+    return <Navigate to="/login" />
+  }
+
+  // Une invitation à un hub en attente passe devant : la personne vient
+  // de cliquer un lien partagé, elle attend l'écran des hubs, pas le sien.
+  return <Navigate to={readInvitation() ? '/hubs' : '/foyer'} />
 }

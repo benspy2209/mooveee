@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Navigate, createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
+import { readInvitation } from '@/lib/invitation'
 
 import type { FormEvent } from 'react'
 
@@ -24,7 +25,8 @@ function LoginPage() {
   // Déjà connecté (magic link validé, connexion par code réussie…) : la
   // page de connexion n'a plus de raison d'être, direction le foyer.
   if (!loading && session) {
-    return <Navigate to="/foyer" />
+    // Même règle qu'à la racine : une invitation en attente mène aux hubs.
+    return <Navigate to={readInvitation() ? '/hubs' : '/foyer'} />
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -65,7 +67,10 @@ function LoginPage() {
 
         {mode === 'code' ? (
           <>
-            <p className="mt-4 text-sm" style={{ color: 'var(--sea-ink-soft)' }}>
+            <p
+              className="mt-4 text-sm"
+              style={{ color: 'var(--sea-ink-soft)' }}
+            >
               Entrez votre code d'accès.
             </p>
             <AccessCodeLogin />
@@ -79,9 +84,11 @@ function LoginPage() {
           </>
         ) : (
           <>
-            <p className="mt-4 text-sm" style={{ color: 'var(--sea-ink-soft)' }}>
-              Recevez un code de connexion par email. Aucun mot de passe
-              requis.
+            <p
+              className="mt-4 text-sm"
+              style={{ color: 'var(--sea-ink-soft)' }}
+            >
+              Recevez un code de connexion par email. Aucun mot de passe requis.
             </p>
             <EmailOtpLogin
               email={email}
@@ -139,76 +146,31 @@ function EmailOtpLogin({
   return (
     <>
       {status === 'sent' ? (
-          <div className="mt-6">
-            <p className="rounded-md bg-green-50 p-4 text-sm text-green-800">
-              Un email a été envoyé à{' '}
-              <span className="font-medium">{email}</span>. Saisissez le code
-              reçu, ou cliquez sur le lien dans l'email.
-            </p>
-            <form onSubmit={onVerify} className="mt-4 space-y-4">
-              <div>
-                <label
-                  htmlFor="otp-code"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Code de connexion
-                </label>
-                <input
-                  id="otp-code"
-                  type="text"
-                  required
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  pattern="[0-9]{6}"
-                  maxLength={6}
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  className="field-lagoon mt-1 w-full px-3 py-3 text-center text-lg tracking-[0.4em]"
-                  placeholder="000000"
-                />
-              </div>
-
-              {error && (
-                <p className="rounded-md bg-red-50 p-3 text-sm text-red-800">
-                  Une erreur est survenue : {error}
-                </p>
-              )}
-
-              <button
-                type="submit"
-                disabled={verifying || code.trim().length < 6}
-                className="btn-lagoon w-full px-4 py-2.5 text-sm font-semibold"
-              >
-                {verifying ? 'Vérification…' : 'Se connecter'}
-              </button>
-
-              <button
-                type="button"
-                onClick={onReset}
-                className="w-full text-center text-sm text-gray-500 hover:text-gray-700"
-              >
-                Changer d'adresse ou renvoyer un email
-              </button>
-            </form>
-          </div>
-        ) : (
-          <form onSubmit={onSend} className="mt-6 space-y-4">
+        <div className="mt-6">
+          <p className="rounded-md bg-green-50 p-4 text-sm text-green-800">
+            Un email a été envoyé à <span className="font-medium">{email}</span>
+            . Saisissez le code reçu, ou cliquez sur le lien dans l'email.
+          </p>
+          <form onSubmit={onVerify} className="mt-4 space-y-4">
             <div>
               <label
-                htmlFor="email"
+                htmlFor="otp-code"
                 className="block text-sm font-medium text-gray-700"
               >
-                Adresse email
+                Code de connexion
               </label>
               <input
-                id="email"
-                type="email"
+                id="otp-code"
+                type="text"
                 required
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="field-lagoon mt-1 w-full px-3 py-3 text-sm"
-                placeholder="vous@exemple.be"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                className="field-lagoon mt-1 w-full px-3 py-3 text-center text-lg tracking-[0.4em]"
+                placeholder="000000"
               />
             </div>
 
@@ -220,15 +182,59 @@ function EmailOtpLogin({
 
             <button
               type="submit"
-              disabled={status === 'sending'}
+              disabled={verifying || code.trim().length < 6}
               className="btn-lagoon w-full px-4 py-2.5 text-sm font-semibold"
             >
-              {status === 'sending'
-                ? 'Envoi en cours…'
-                : 'Recevoir le code de connexion'}
+              {verifying ? 'Vérification…' : 'Se connecter'}
+            </button>
+
+            <button
+              type="button"
+              onClick={onReset}
+              className="w-full text-center text-sm text-gray-500 hover:text-gray-700"
+            >
+              Changer d'adresse ou renvoyer un email
             </button>
           </form>
-        )}
+        </div>
+      ) : (
+        <form onSubmit={onSend} className="mt-6 space-y-4">
+          <div>
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Adresse email
+            </label>
+            <input
+              id="email"
+              type="email"
+              required
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="field-lagoon mt-1 w-full px-3 py-3 text-sm"
+              placeholder="vous@exemple.be"
+            />
+          </div>
+
+          {error && (
+            <p className="rounded-md bg-red-50 p-3 text-sm text-red-800">
+              Une erreur est survenue : {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={status === 'sending'}
+            className="btn-lagoon w-full px-4 py-2.5 text-sm font-semibold"
+          >
+            {status === 'sending'
+              ? 'Envoi en cours…'
+              : 'Recevoir le code de connexion'}
+          </button>
+        </form>
+      )}
     </>
   )
 }

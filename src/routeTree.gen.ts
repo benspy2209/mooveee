@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as RejoindreRouteImport } from './routes/rejoindre'
 import { Route as AuthedActivitesRouteImport } from './routes/_authed/activites'
 import { Route as AuthedBienvenueRouteImport } from './routes/_authed/bienvenue'
 import { Route as AuthedDemandesRouteImport } from './routes/_authed/demandes'
@@ -33,6 +34,11 @@ const AuthedRoute = AuthedRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RejoindreRoute = RejoindreRouteImport.update({
+  id: '/rejoindre',
+  path: '/rejoindre',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthedActivitesRoute = AuthedActivitesRouteImport.update({
@@ -79,6 +85,7 @@ const AuthedSemaineRoute = AuthedSemaineRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/rejoindre': typeof RejoindreRoute
   '/activites': typeof AuthedActivitesRoute
   '/bienvenue': typeof AuthedBienvenueRoute
   '/demandes': typeof AuthedDemandesRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/rejoindre': typeof RejoindreRoute
   '/activites': typeof AuthedActivitesRoute
   '/bienvenue': typeof AuthedBienvenueRoute
   '/demandes': typeof AuthedDemandesRoute
@@ -105,6 +113,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
   '/login': typeof LoginRoute
+  '/rejoindre': typeof RejoindreRoute
   '/_authed/activites': typeof AuthedActivitesRoute
   '/_authed/bienvenue': typeof AuthedBienvenueRoute
   '/_authed/demandes': typeof AuthedDemandesRoute
@@ -119,6 +128,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/rejoindre'
     | '/activites'
     | '/bienvenue'
     | '/demandes'
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/rejoindre'
     | '/activites'
     | '/bienvenue'
     | '/demandes'
@@ -144,6 +155,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authed'
     | '/login'
+    | '/rejoindre'
     | '/_authed/activites'
     | '/_authed/bienvenue'
     | '/_authed/demandes'
@@ -158,6 +170,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthedRoute: typeof AuthedRouteWithChildren
   LoginRoute: typeof LoginRoute
+  RejoindreRoute: typeof RejoindreRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -181,6 +194,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rejoindre': {
+      id: '/rejoindre'
+      path: '/rejoindre'
+      fullPath: '/rejoindre'
+      preLoaderRoute: typeof RejoindreRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed/activites': {
@@ -271,6 +291,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthedRoute: AuthedRouteWithChildren,
   LoginRoute: LoginRoute,
+  RejoindreRoute: RejoindreRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
