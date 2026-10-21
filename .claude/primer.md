@@ -651,3 +651,29 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   (≈ 3 jours). Reporté après le pilote : accueil orienté besoin et
   question d'entrée, pour les concevoir sur ce qu'on aura observé.
   Next : arbitrage de Ben sur ces 3 jours avant le 2/11.
+- 21/10 (2) — **ACCOMPAGNEMENT EN PLACE** (commit ce5aa64) d'après les
+  maquettes de Ben (3 écrans ; le 3e, la voix, est marqué « concept
+  futur » et n'est PAS implémenté). L'onglet actif des maquettes est
+  Semaine : le bloc s'affiche donc en tête de /semaine, pas dans une
+  nouvelle route — aucune modification de la navigation.
+  `src/lib/parcours.ts` = fonction PURE `prochaineEtape(etat)` : prénom →
+  foyer → enfant → hub **validé** → activité → premier trajet. L'étape se
+  déduit de la base, jamais stockée. `hub_en_attente` passe AVANT `hub`
+  et n'a **aucune action** : on n'invite pas une famille à recommencer
+  quand elle attend un responsable. `src/components/Accompagnement.tsx` =
+  « Reprenons où vous en étiez » (progression, étape, bouton principal,
+  « Aller à ma semaine » qui replie) ou « Bonjour X · Votre semaine, en
+  un coup d'œil » (examiner une demande reçue, sinon chercher une place).
+  Ni score, ni série, ni badge (interdit 5) ; la barre ne mesure qu'un
+  formulaire. semaine.tsx : 4 comptes ajoutés (head+count), état calculé
+  dans SemainePage et passé en props à WeekScreen.
+  Vérifié : 9 cas exécutés via `node --experimental-strip-types` sur un
+  script du scratchpad (le projet n'a AUCUN framework de test, pas de
+  script `test` dans package.json) ; rendu vu dans Chrome pour l'état
+  « tout en place » et pour un état incomplet forcé temporairement puis
+  restauré. ⚠ 2 erreurs eslint préexistantes dans semaine.tsx (lignes
+  209/214 avant ce commit), hors périmètre.
+  Reste du chantier K : masquer les réglages de génération tant qu'aucune
+  activité n'existe ; accueil orienté besoin plus riche (cartes « retour
+  à organiser ») ; question d'entrée « De quoi avez-vous besoin ? ».
+  Next : Ben valide à l'écran, puis push (= déploiement).
