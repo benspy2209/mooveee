@@ -872,3 +872,89 @@ Restent à documenter dans l'AIPD : la table de correspondance éphémère
 sur l'appareil, le journal des actions confirmées, et le modèle de
 transcription stocké localement. L'avis professionnel reste requis, et
 reste le chemin critique.
+
+---
+
+## K. Accompagnement du parent (deux messages de Stéphane, 20-21/10/2026)
+
+Demande : garder la présentation actuelle et renforcer l'accompagnement,
+dans l'esprit de Duolingo — une question claire, une action évidente,
+une progression compréhensible. Parcours guidé jusqu'au premier trajet
+pour un nouveau parent ; raccourcis vers le besoin pour un parent déjà
+inscrit. Plus trois remarques d'écran et un défaut sur Équilibre.
+
+### K.1 Fait tout de suite (commit c150e70)
+
+- **Défaut Équilibre corrigé.** Le message se basait sur la dynamique de
+  participation, qui inclut le mouvement `solde_initial` (100 à la
+  création du profil), alors que les deux compteurs affichés ne somment
+  que `gain` et `usage`. Un parent fraîchement inscrit lisait donc
+  « vous apportez plus d'aide que vous n'en recevez » devant deux zéros.
+  Le message compare maintenant l'aide réellement échangée et dit, quand
+  rien n'a eu lieu, que la dynamique affichée est la dotation de départ.
+- **Demandes.** L'état vide disait « trouvez un trajet ouvert sur
+  l'écran de votre hub » sans lien. C'est un bouton.
+
+### K.2 Ce qui existe déjà et qu'il croit manquant
+
+Vérifié dans le code : **Semaine a déjà son état vide** avec le bon
+message et un bouton « Créer une activité ». Il reste à masquer les
+réglages de génération tant qu'aucune activité n'existe, ce qui est une
+demi-journée.
+
+Plus largement : les écrans ont déjà des états vides corrects. Ce qui
+manque n'est pas l'information, c'est **le fil** entre les écrans.
+
+### K.3 La brique à poser : une fonction « prochaine étape »
+
+Une seule fonction pure prend l'état du parent et renvoie l'étape
+suivante, son libellé et sa destination. Ordre des prérequis réels,
+relevé dans le code :
+
+1. prénom (profil) ; 2. foyer ; 3. enfant ; 4. hub rejoint **et validé** ;
+5. activité ; 6. premier trajet.
+
+Cette fonction alimente trois choses à la fois :
+
+- la bannière « voici votre prochaine étape », sur Foyer et ailleurs ;
+- la reprise après interruption, sans état à stocker : l'étape se déduit
+  de la base, elle n'a pas à être mémorisée ;
+- **plus tard, l'assistant vocal** : quand un parent dira « je peux
+  faire l'aller mais pas le retour », c'est cette même fonction qui
+  dira ce qui manque encore. C'est la réponse à la question de
+  Stéphane : oui, l'accompagnement se prévoit pour la voix, et c'est la
+  même brique, testable sans aucune IA.
+
+### K.4 Deux réserves de fond sur le modèle Duolingo
+
+*La progression ne dépend pas que du parent.* Duolingo guide un parcours
+solitaire : l'étape suivante est toujours à la portée de l'apprenant.
+Ici, l'étape suivante est souvent « attendre qu'une autre famille
+réponde ». Un accompagnement qui promet une progression continue
+mentirait. Il doit savoir dire « vous avez fait votre part, c'est au
+tour d'une autre famille », et le dire aussi bien que les autres étapes.
+
+*Le ludique s'arrête où commence l'entraide.* Une barre de progression
+pendant la configuration est sans risque : elle mesure un formulaire.
+Mais ni série, ni badge, ni encouragement indexés sur les trajets
+partagés : l'interdit 5 proscrit tout score de contribution visible, et
+le vocabulaire imposé reste en vigueur.
+
+### K.5 Charge et recommandation
+
+| Bloc | Ordre de grandeur |
+| --- | --- |
+| Fonction « prochaine étape » + tests | 1 jour |
+| Bannière de prochaine étape sur les écrans | 1 jour |
+| Masquer les réglages avancés tant que c'est vide | 0,5 jour |
+| Accueil orienté besoin pour parent déjà inscrit | 1,5 à 2 jours |
+| Question d'entrée « De quoi avez-vous besoin ? » | 2 à 3 jours |
+
+**Recommandation pour le pilote du 2 au 6 novembre : les trois premiers
+blocs, pas les deux derniers.**
+
+Raison : il reste moins de deux semaines, et les deux derniers blocs
+changent la navigation. Surtout, le pilote existe pour observer comment
+de vraies familles se débrouillent. Concevoir l'accueil orienté besoin
+avant d'avoir vu où elles butent, c'est deviner. Après le pilote, on
+saura.
