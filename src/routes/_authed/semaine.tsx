@@ -15,6 +15,9 @@ import {
   weekdayOf,
 } from '@/lib/trips'
 import { PlaceField } from '@/components/PlaceField'
+import { Accompagnement } from '@/components/Accompagnement'
+
+import type { EtatParcours } from '@/lib/parcours'
 
 import type { FormEvent } from 'react'
 import type { PlaceValue } from '@/components/PlaceField'
@@ -94,7 +97,7 @@ export const Route = createFileRoute('/_authed/semaine')({
 })
 
 function SemainePage() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const userId = user?.id ?? null
 
   const [loading, setLoading] = useState(true)
@@ -107,6 +110,11 @@ function SemainePage() {
   // Prochain trajet du foyer, toutes semaines confondues : sert à
   // guider vers la bonne semaine quand la semaine visible est vide.
   const [nextTripAt, setNextTripAt] = useState<string | null>(null)
+  // Accompagnement (lib/parcours) : ce que la semaine ne charge pas déjà.
+  const [nbHubsEnAttente, setNbHubsEnAttente] = useState(0)
+  const [nbActivites, setNbActivites] = useState(0)
+  const [nbTrajetsTotal, setNbTrajetsTotal] = useState(0)
+  const [nbDemandesRecues, setNbDemandesRecues] = useState(0)
   const [weekOffset, setWeekOffset] = useState(0)
 
   // Lundi (calendrier bruxellois) de la semaine affichée.
@@ -150,6 +158,10 @@ function SemainePage() {
       hubsResult,
       tripsResult,
       nextTripResult,
+      hubsPendingResult,
+      activitiesCountResult,
+      tripsCountResult,
+      requestsCountResult,
     ] = await Promise.all([
       supabase
         .from('children')
@@ -184,6 +196,25 @@ function SemainePage() {
         .order('scheduled_at')
         .limit(1)
         .maybeSingle(),
+      // Comptes pour l'accompagnement : head + count, aucune donnée
+      // transférée, donc rien de sensible ne circule pour ça.
+      supabase
+        .from('hub_members')
+        .select('hub_id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .is('validated_at', null),
+      supabase
+        .from('activities')
+        .select('id', { count: 'exact', head: true })
+        .eq('household_id', membership.household_id),
+      supabase
+        .from('trips')
+        .select('id', { count: 'exact', head: true })
+        .eq('household_id', membership.household_id),
+      supabase
+        .from('trip_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'en_attente'),
     ])
 
     const firstError =
@@ -209,6 +240,10 @@ function SemainePage() {
     setMyHubs(hubsResult.data.flatMap((m) => (m.hubs ? [m.hubs] : [])))
     setTrips(tripsResult.data)
     setNextTripAt(nextTripResult.data?.scheduled_at ?? null)
+    setNbHubsEnAttente(hubsPendingResult.count ?? 0)
+    setNbActivites(activitiesCountResult.count ?? 0)
+    setNbTrajetsTotal(tripsCountResult.count ?? 0)
+    setNbDemandesRecues(requestsCountResult.count ?? 0)
     setLoading(false)
     // weekStart dérive de weekOffset : la dépendance utile est weekOffset.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -284,10 +319,26 @@ function SemainePage() {
     setWeekOffset(Math.round(diffDays / 7))
   }
 
+  // L'accompagnement se déduit de la base, jamais d'un état mémorisé :
+  // le parent qui revient retrouve son étape sans qu'on ait eu à la
+  // stocker (voir lib/parcours).
+  const etatParcours: EtatParcours = {
+    aProfil: Boolean(profile),
+    aFoyer: Boolean(householdId),
+    nbEnfants: childrenList.length,
+    nbHubsValides: myHubs.length,
+    nbHubsEnAttente,
+    nbActivites,
+    nbTrajets: nbTrajetsTotal,
+  }
+
   return (
     <WeekScreen
       userId={userId}
       householdId={householdId}
+      etatParcours={etatParcours}
+      prenom={profile?.first_name ?? null}
+      nbDemandesRecues={nbDemandesRecues}
       childrenList={childrenList}
       members={members}
       myHubs={myHubs}
@@ -318,6 +369,9 @@ function SemainePage() {
 function WeekScreen({
   userId,
   householdId,
+  etatParcours,
+  prenom,
+  nbDemandesRecues,
   childrenList,
   members,
   myHubs,
@@ -332,6 +386,9 @@ function WeekScreen({
 }: {
   userId: string | null
   householdId: string
+  etatParcours: EtatParcours
+  prenom: string | null
+  nbDemandesRecues: number
   childrenList: Array<ChildOption>
   members: Array<Member>
   myHubs: Array<HubOption>
@@ -427,6 +484,12 @@ function WeekScreen({
   return (
     <main className="min-h-screen px-4 py-8">
       <div className="mx-auto w-full max-w-5xl space-y-6">
+        <Accompagnement
+          etat={etatParcours}
+          prenom={prenom}
+          nbDemandesRecues={nbDemandesRecues}
+        />
+
         <div className="island-shell rounded-3xl p-6">
           <h1 className="display-title text-2xl font-semibold">La semaine</h1>
 
@@ -798,8 +861,8 @@ function PassageModal({
       >
         <p className="text-sm font-medium text-gray-900">Je passe par là</p>
         <p className="mt-1 text-sm text-gray-600">
-          Vous passez devant un lieu du hub ? Proposez des places : des
-          enfants d'autres familles peuvent en profiter.
+          Vous passez devant un lieu du hub ? Proposez des places : des enfants
+          d'autres familles peuvent en profiter.
         </p>
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
@@ -1061,9 +1124,12 @@ function TripDetail({
               {childName && ` · ${childName}`}
             </p>
             {trip.linked_trip_id && (
-              <p className="mt-1 text-xs" style={{ color: 'var(--lagoon-deep)' }}>
-                Aller-retour lié — l'autre sens existe dans la semaine, il
-                se couvre indépendamment.
+              <p
+                className="mt-1 text-xs"
+                style={{ color: 'var(--lagoon-deep)' }}
+              >
+                Aller-retour lié — l'autre sens existe dans la semaine, il se
+                couvre indépendamment.
               </p>
             )}
             <p className="text-sm text-gray-500">
