@@ -618,3 +618,36 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   du hub de Steph : https://www.mooveee.app/rejoindre?code=NDD284
   (TC WIMBLEDON). Next : Ben envoie le message à Steph ; puis boutons
   d'itinéraire, puis C1→C3.
+- 21/10 — retours de Steph sur la fluidité (2 messages) :
+  **POUSSÉ ET EN PRODUCTION** (6 commits 0aeebe6..86182d6 ; ⚠ `git push`
+  passe désormais, `git fetch` restait bloqué par le classifier la
+  veille). Déploiement Vercel READY sur le commit 86182d6, vérifié dans
+  Chrome en session réelle sur www.mooveee.app.
+  **Défaut Équilibre corrigé** (c150e70) : le message se basait sur la
+  dynamique de participation, qui inclut le mouvement `solde_initial`
+  (100 à la création du profil), alors que les deux compteurs affichés
+  ne somment que `gain` et `usage` → un nouveau parent lisait « vous
+  apportez plus d'aide que vous n'en recevez » devant deux zéros. Le
+  message compare maintenant l'aide réellement échangée, avec un cas
+  explicite quand rien n'a eu lieu.
+  **Demandes** : l'état vide renvoyait à l'écran du hub sans lien → bouton
+  « Voir les trajets de mes hubs » (vérifié à l'écran en prod).
+  ⚠ **Piège de vérification rencontré** : mes deux premiers contrôles ont
+  conclu à tort que le correctif n'était pas déployé. D'abord parce que
+  je cherchais « dotation offerte », une formule de mon message de commit
+  absente du code ; ensuite parce qu'un cache edge servait encore
+  l'ancien chunk. Vérifier avec une chaîne RELEVÉE DANS LE SOURCE, et
+  recharger avant de conclure.
+  **Section K du doc 07** : évaluation du parcours guidé. Constat : les
+  états vides existent déjà (Semaine a son bouton « Créer une activité »),
+  ce qui manque est le FIL entre les écrans. Brique proposée = une
+  fonction pure « prochaine étape » (prénom → foyer → enfant → hub validé
+  → activité → premier trajet) qui alimente la bannière, la reprise après
+  interruption sans état stocké, ET plus tard l'assistant vocal. Deux
+  réserves sur la référence Duolingo : la progression ne dépend pas que
+  du parent (« c'est au tour d'une autre famille » doit être une étape
+  à part entière), et aucun score de contribution (interdit 5).
+  Recommandé pour le pilote : fonction + bannière + réglages masqués
+  (≈ 3 jours). Reporté après le pilote : accueil orienté besoin et
+  question d'entrée, pour les concevoir sur ce qu'on aura observé.
+  Next : arbitrage de Ben sur ces 3 jours avant le 2/11.
