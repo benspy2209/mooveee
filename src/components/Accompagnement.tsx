@@ -20,14 +20,23 @@ import type { EtatParcours } from '@/lib/parcours'
 // chiffré. L'interdit 5 proscrit tout score de contribution visible, et
 // une barre de progression n'a sa place que sur la configuration, où
 // elle mesure un formulaire, jamais sur l'entraide elle-même.
+export interface TrajetACouvrir {
+  id: string
+  scheduled_at: string
+  direction: 'aller' | 'retour'
+  label: string | null
+}
+
 export function Accompagnement({
   etat,
   prenom,
   nbDemandesRecues,
+  trajetACouvrir,
 }: {
   etat: EtatParcours
   prenom: string | null
   nbDemandesRecues: number
+  trajetACouvrir: TrajetACouvrir | null
 }) {
   const [replie, setReplie] = useState(false)
   const etape = prochaineEtape(etat)
@@ -42,24 +51,54 @@ export function Accompagnement({
           Votre semaine, en un coup d'œil.
         </p>
 
+        {/* Ce qui attend le parent, dans l'ordre où ça le concerne :
+            d'abord ce qu'une autre famille lui demande, puis ce que son
+            propre calendrier laisse en suspens. */}
+        {nbDemandesRecues > 0 && (
+          <Link
+            to="/demandes"
+            className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-teal-200 bg-teal-50 p-4 text-left"
+          >
+            <span className="text-sm text-teal-900">
+              <span className="block font-medium">
+                {nbDemandesRecues === 1
+                  ? 'Une demande reçue'
+                  : `${nbDemandesRecues} demandes reçues`}
+              </span>
+              <span className="mt-0.5 block">
+                {nbDemandesRecues === 1
+                  ? 'Une famille de votre groupe cherche une place.'
+                  : 'Des familles de votre groupe cherchent une place.'}
+              </span>
+            </span>
+            <span className="shrink-0 text-sm font-medium text-teal-800">
+              Examiner
+            </span>
+          </Link>
+        )}
+
+        {trajetACouvrir && (
+          <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+            <p className="text-sm font-medium text-amber-900">
+              {trajetACouvrir.label ?? 'Trajet'} ·{' '}
+              {trajetACouvrir.direction === 'retour' ? 'retour' : 'aller'}
+            </p>
+            <p className="mt-0.5 text-sm text-amber-900">
+              {formatQuand(trajetACouvrir.scheduled_at)} ·{' '}
+              {trajetACouvrir.direction === 'retour'
+                ? 'retour à organiser'
+                : 'aller à organiser'}
+            </p>
+          </div>
+        )}
+
         <div className="mt-4 flex flex-wrap gap-2">
-          {nbDemandesRecues > 0 ? (
-            <Link
-              to="/demandes"
-              className="btn-lagoon px-4 py-2.5 text-sm font-semibold"
-            >
-              {nbDemandesRecues === 1
-                ? 'Examiner la demande reçue'
-                : `Examiner les ${nbDemandesRecues} demandes reçues`}
-            </Link>
-          ) : (
-            <Link
-              to="/hubs"
-              className="btn-lagoon px-4 py-2.5 text-sm font-semibold"
-            >
-              Chercher une place
-            </Link>
-          )}
+          <Link
+            to="/hubs"
+            className="btn-lagoon px-4 py-2.5 text-sm font-semibold"
+          >
+            Chercher une place
+          </Link>
           <Link to="/activites" className="btn-ghost px-4 py-2.5 text-sm">
             Proposer une place
           </Link>
@@ -141,4 +180,17 @@ export function Accompagnement({
       </div>
     </section>
   )
+}
+
+// Heure locale belge : la base stocke en UTC, les parents lisent l'heure
+// de leur montre (règle du projet sur le fuseau).
+function formatQuand(iso: string): string {
+  return new Date(iso).toLocaleString('fr-BE', {
+    timeZone: 'Europe/Brussels',
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }

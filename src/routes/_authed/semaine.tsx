@@ -115,6 +115,12 @@ function SemainePage() {
   const [nbActivites, setNbActivites] = useState(0)
   const [nbTrajetsTotal, setNbTrajetsTotal] = useState(0)
   const [nbDemandesRecues, setNbDemandesRecues] = useState(0)
+  const [trajetACouvrir, setTrajetACouvrir] = useState<{
+    id: string
+    scheduled_at: string
+    direction: TripDirection
+    label: string | null
+  } | null>(null)
   const [weekOffset, setWeekOffset] = useState(0)
 
   // Lundi (calendrier bruxellois) de la semaine affichée.
@@ -162,6 +168,7 @@ function SemainePage() {
       activitiesCountResult,
       tripsCountResult,
       requestsCountResult,
+      aCouvrirResult,
     ] = await Promise.all([
       supabase
         .from('children')
@@ -211,10 +218,30 @@ function SemainePage() {
         .from('trips')
         .select('id', { count: 'exact', head: true })
         .eq('household_id', membership.household_id),
+      // Demandes REÇUES : celles posées sur les trajets de mon foyer.
+      // Sans la jointure, le compte inclurait mes propres demandes
+      // envoyées, et l'accueil annoncerait qu'une autre famille cherche
+      // une place alors que c'est moi qui attends une réponse.
       supabase
         .from('trip_requests')
-        .select('id', { count: 'exact', head: true })
+        .select('id, trips!inner(household_id)', {
+          count: 'exact',
+          head: true,
+        })
+        .eq('trips.household_id', membership.household_id)
         .eq('status', 'en_attente'),
+      // Prochain trajet du foyer encore sans conducteur : c'est la
+      // carte « retour à organiser » de l'accueil.
+      supabase
+        .from('trips')
+        .select('id, scheduled_at, direction, activities(label)')
+        .eq('household_id', membership.household_id)
+        .is('driver_id', null)
+        .neq('status', 'annule')
+        .gte('scheduled_at', new Date().toISOString())
+        .order('scheduled_at')
+        .limit(1)
+        .maybeSingle(),
     ])
 
     const firstError =
@@ -244,6 +271,16 @@ function SemainePage() {
     setNbActivites(activitiesCountResult.count ?? 0)
     setNbTrajetsTotal(tripsCountResult.count ?? 0)
     setNbDemandesRecues(requestsCountResult.count ?? 0)
+    setTrajetACouvrir(
+      aCouvrirResult.data
+        ? {
+            id: aCouvrirResult.data.id,
+            scheduled_at: aCouvrirResult.data.scheduled_at,
+            direction: aCouvrirResult.data.direction,
+            label: aCouvrirResult.data.activities?.label ?? null,
+          }
+        : null,
+    )
     setLoading(false)
     // weekStart dérive de weekOffset : la dépendance utile est weekOffset.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -339,6 +376,7 @@ function SemainePage() {
       etatParcours={etatParcours}
       prenom={profile?.first_name ?? null}
       nbDemandesRecues={nbDemandesRecues}
+      trajetACouvrir={trajetACouvrir}
       childrenList={childrenList}
       members={members}
       myHubs={myHubs}
@@ -372,6 +410,7 @@ function WeekScreen({
   etatParcours,
   prenom,
   nbDemandesRecues,
+  trajetACouvrir,
   childrenList,
   members,
   myHubs,
@@ -389,6 +428,12 @@ function WeekScreen({
   etatParcours: EtatParcours
   prenom: string | null
   nbDemandesRecues: number
+  trajetACouvrir: {
+    id: string
+    scheduled_at: string
+    direction: TripDirection
+    label: string | null
+  } | null
   childrenList: Array<ChildOption>
   members: Array<Member>
   myHubs: Array<HubOption>
@@ -488,6 +533,7 @@ function WeekScreen({
           etat={etatParcours}
           prenom={prenom}
           nbDemandesRecues={nbDemandesRecues}
+          trajetACouvrir={trajetACouvrir}
         />
 
         <div className="island-shell rounded-3xl p-6">
@@ -511,7 +557,14 @@ function WeekScreen({
               </button>
             </div>
             <p className="text-sm font-medium text-gray-700">{rangeLabel}</p>
-            <div className="flex items-center gap-2">
+            {/* Les réglages de génération n'ont de sens qu'une fois une
+                activité créée : avant, ils encombrent l'écran d'un parent
+                qui n'a encore rien à générer, et l'état vide ci-dessous
+                dit déjà quoi faire (retour du porteur, 20/10/2026). */}
+            <div
+              className="flex items-center gap-2"
+              hidden={etatParcours.nbActivites === 0}
+            >
               <label htmlFor="generation-horizon" className="sr-only">
                 Horizon de génération
               </label>
