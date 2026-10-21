@@ -321,10 +321,21 @@ function DemandesPage() {
             Mes demandes envoyées
           </h2>
           {sent.length === 0 ? (
-            <p className="mt-2 text-sm text-gray-500">
-              Aucune demande envoyée. Trouvez un trajet ouvert sur l’écran de
-              votre hub.
-            </p>
+            <div className="mt-2">
+              <p className="text-sm text-gray-500">
+                Aucune demande envoyée. Les trajets où une famille offre des
+                places sont dans vos hubs.
+              </p>
+              {/* La phrase seule obligeait à deviner le chemin : le bouton
+                  mène là où se trouvent les places (retour du porteur,
+                  20/10/2026). */}
+              <Link
+                to="/hubs"
+                className="btn-lagoon mt-3 inline-block px-3.5 py-1.5 text-sm font-semibold"
+              >
+                Voir les trajets de mes hubs
+              </Link>
+            </div>
           ) : (
             <ul className="mt-2 divide-y divide-gray-100">
               {sent.map((request) => {

@@ -187,12 +187,22 @@ function EquilibrePage() {
             </div>
           </div>
 
+          {/* Le message compare l'aide RÉELLEMENT échangée, pas la
+              dynamique de participation : celle-ci part d'une dotation
+              initiale, et s'y fier affichait « vous apportez plus d'aide
+              que vous n'en recevez » à une famille dont les deux
+              compteurs étaient encore à zéro (retour du porteur,
+              20/10/2026). */}
           <p className="mt-4 text-sm text-gray-600">
-            {balance > 0 &&
+            {helpGiven === 0 &&
+              helpReceived === 0 &&
+              'Votre entraide n’a pas encore commencé : vous n’avez ni proposé ni reçu de place. La dynamique de participation ci-dessus est celle offerte au départ à chaque famille, elle ne vous engage à rien.'}
+            {helpGiven > helpReceived &&
               'Vous apportez en ce moment plus d’aide que vous n’en recevez. Merci pour la communauté.'}
-            {balance === 0 &&
+            {helpGiven === helpReceived &&
+              (helpGiven > 0 || helpReceived > 0) &&
               'Votre participation est à l’équilibre entre aide apportée et aide reçue.'}
-            {balance < 0 &&
+            {helpGiven < helpReceived &&
               'Vous recevez en ce moment plus d’aide que vous n’en apportez. C’est exactement à ça que sert l’entraide : rien n’est bloqué, demandez des places comme d’habitude.'}
           </p>
 
