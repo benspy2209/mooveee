@@ -677,3 +677,26 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   activité n'existe ; accueil orienté besoin plus riche (cartes « retour
   à organiser ») ; question d'entrée « De quoi avez-vous besoin ? ».
   Next : Ben valide à l'écran, puis push (= déploiement).
+- 21/10 (3) — **CARTES D'ACCUEIL ET RÉGLAGES MASQUÉS** (commit 9c90768,
+  POUSSÉ) : réglages de génération cachés tant que `nbActivites === 0` ;
+  carte « demandes reçues » (lien Examiner) ; carte « à organiser » =
+  prochain trajet du foyer sans conducteur (activité, sens, heure belge).
+  ⚠ **Défaut que j'avais introduit et corrigé avant livraison** : le
+  compteur de demandes comptait toutes les demandes `en_attente` visibles
+  par la RLS, donc AUSSI mes propres demandes envoyées → l'accueil aurait
+  annoncé qu'une autre famille cherche une place alors que c'est moi qui
+  attends. Filtre repris de demandes.tsx :
+  `.select('id, trips!inner(household_id)', {count, head})` +
+  `.eq('trips.household_id', …)`. Leçon : pour tout compteur, reprendre
+  le filtre de l'écran qui fait déjà autorité, ne pas le réinventer.
+  **Question d'entrée « De quoi avez-vous besoin ? » volontairement NON
+  faite** : ses deux réponses sont déjà les deux boutons de l'accueil
+  (Chercher une place / Proposer une place) ; un écran intermédiaire
+  allongerait le parcours sans rien résoudre. À rouvrir seulement si le
+  pilote montre que les parents hésitent.
+  ⚠ Constat non traité : ouvrir directement une route profonde
+  (ex. /semaine) renvoie vers /foyer pendant le chargement de session.
+  Sans effet en navigation par onglets, mais à régler avant d'envoyer des
+  notifications avec liens profonds (chantier C13).
+  Reste du chantier K : rien d'engagé. Next : retour de Ben et de Steph
+  à l'écran.
