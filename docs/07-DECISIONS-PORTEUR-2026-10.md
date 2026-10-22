@@ -958,3 +958,88 @@ changent la navigation. Surtout, le pilote existe pour observer comment
 de vraies familles se débrouillent. Concevoir l'accueil orienté besoin
 avant d'avoir vu où elles butent, c'est deviner. Après le pilote, on
 saura.
+
+---
+
+## L. Trouver un hub sans code (Stéphane, 22/10/2026)
+
+Question : comment rejoindre « Tennis des Tilleuls » sans code ni
+invitation ? Demande d'évaluation : ce qui existe, ce qui est simple, ce
+qui est lourd.
+
+### L.1 Ce qui existe déjà, et qui résout le plus dur
+
+**Le patron de sécurité est déjà en production.** `hub_for_join_code`
+est une fonction `security definer`, `stable`, à `search_path` fixé, qui
+renvoie **exactement quatre colonnes** : identifiant, nom, type,
+commune. Ni membres, ni enfants, ni trajets, ni code. C'est très
+précisément le périmètre que Stéphane décrit pour les résultats de
+recherche.
+
+Une recherche par nom serait **la même fonction avec un autre filtre**.
+Rien à inventer sur la partie délicate.
+
+**Pourquoi une fonction et pas une simple requête** : la policy
+`hubs_member_select` ne laisse lire que les hubs dont on est membre
+validé ou propriétaire. Un parent ne voit donc aujourd'hui aucun autre
+hub, et c'est voulu. Élargir cette policy exposerait la ligne entière,
+code d'adhésion compris — c'est l'erreur que le projet a déjà commise
+une fois sur `users` (voir « une RLS filtre les lignes, jamais les
+colonnes »). La fonction choisit ses colonnes ; la policy, non.
+
+**Le parcours d'adhésion existe en entier** : pacte, demande en attente,
+validation par un responsable, retrait. Un résultat de recherche n'a
+qu'à alimenter ce parcours à la place du code. Aucune règle nouvelle.
+
+### L.2 Ce qui manque
+
+| Élément | État | Effort |
+| --- | --- | --- |
+| Fonction de recherche nom + commune | à écrire, calquée sur l'existante | ~0,5 j |
+| Écran de recherche + « Demander à rejoindre » | branche sur le parcours existant | ~0,5 à 1 j |
+| Réglage trouvable / sur invitation | **colonne absente** de `hubs`, migration | ~0,5 j |
+| Tolérance aux fautes | `pg_trgm` et `unaccent` **non installées** | ~0,5 j |
+| Vérification de doublon à la création | réutilise la recherche | ~0,5 j |
+
+Total : **deux à trois jours**.
+
+Stéphane a raison sur un point : **l'IA n'est pas nécessaire.** Deux
+extensions Postgres standard suffisent, `unaccent` pour ignorer les
+accents et `pg_trgm` pour la proximité. Elles s'activent en une ligne
+chacune et s'indexent. Une recherche d'intelligence artificielle ici
+serait plus lente, plus chère et moins prévisible.
+
+### L.3 Quatre points de vigilance
+
+*Un hub trouvable devient énumérable.* Qui peut chercher peut balayer
+une commune entière et dresser la liste des groupes. Le nom d'une école
+et sa commune sont publics, donc l'exposition reste faible — à une
+condition : **ne jamais renvoyer le nombre de membres** dans les
+résultats. Ce chiffre dirait combien de familles d'une école donnée
+partagent leurs trajets. Il est tentant à afficher, il ne doit pas
+l'être. Prévoir aussi une longueur minimale de recherche et un plafond
+de résultats.
+
+*Le défaut doit être « sur invitation ».* À la migration, les hubs
+existants ne doivent pas devenir visibles sans décision de leur
+responsable. Le réglage s'ouvre, il ne s'impose pas.
+
+*Les hubs de quartier méritent un traitement à part.* Pour une école ou
+un club, le lieu est public. Pour un quartier, `place_label` peut
+désigner une rue, donc approcher un domicile. Dans les résultats de
+recherche, **n'afficher que la commune pour les hubs de quartier**, le
+libellé précis restant réservé aux membres validés.
+
+*La recherche ne doit pas contourner la validation.* Elle ne fait que
+remplacer le code par un nom. L'arrivée reste une demande en attente,
+acceptée par un responsable. C'est déjà le cas en base, il suffit de ne
+rien court-circuiter.
+
+### L.4 Recommandation
+
+Faisable, bien cadré, et le plus risqué est déjà fait. Mais **pas avant
+le pilote du 2 au 6 novembre** : les premières familles arrivent par
+invitation, c'est le mode qu'on veut observer. La découverte prend son
+sens quand il y a des hubs à découvrir.
+
+À faire juste après, avec le réglage par défaut sur « sur invitation ».
