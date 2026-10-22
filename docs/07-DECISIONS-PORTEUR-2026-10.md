@@ -1139,3 +1139,151 @@ une maîtrise que nous n'avons pas.
 La règle des maquettes n'a pas besoin d'évoluer : les coordonnées
 restent privées par défaut, et l'application n'en transmet aucune. Ce
 qu'un parent écrit de lui-même lui appartient.
+
+---
+
+## N. Les 12 planches, le calendrier et les marges horaires (22/10/2026)
+
+Trois messages et un jeu de 72 écrans
+(`~/Downloads/Mooveee_parcours_72_ecrans_12_planches.pdf`). Évaluation
+d'ensemble : ce qui existe, ce qui est simple, ce qui est à reporter,
+et ce qui est inutilement complexe — puisque la question est posée.
+
+### N.1 Ce qui existe déjà, souvent sans qu'ils le sachent
+
+| Écran ou demande | État réel |
+| --- | --- |
+| Connexion par email et code à 6 chiffres (planche 1, 02-03) | **en production** |
+| Profil, enfant, année de naissance | fait |
+| Rehausseur | **`children.booster_seat` existe déjà** |
+| Photo d'enfant et son consentement | fait, bucket privé, URL signée |
+| Pacte de hub | fait, avec version, par hub |
+| Code d'adhésion, vérification, demande en attente | fait |
+| Validation et refus par un responsable | fait |
+| Retrait d'un membre | fait le 20/10 |
+| Coadministrateur | **`hub_members.is_admin` existe**, il manque le bouton |
+| « Toutes les fonctions dès le premier jour », seuil de 5 familles sans déblocage | **déjà conforme** (interdit 8) |
+| Points de rendez-vous publics, avec photo et point par défaut | fait |
+| Confirmation de remise de l'enfant | fait |
+| Signalement, avec drapeau « implique un mineur » | fait |
+| Stock de places, offre publiée dans **un seul** hub | **déjà l'état actuel** : `seats_available` et un `hub_id` par trajet |
+| Annulation qui remet le besoin à couvrir, sans réaffectation | déjà le comportement |
+
+Le coadministrateur est le meilleur rapport valeur sur effort de tout le
+lot : la colonne est là, il manque un bouton.
+
+### N.2 Le défaut réel, à corriger avant le pilote
+
+**Les trajets sont générés à l'heure exacte de l'activité.** Dans
+`lib/trips.ts`, l'aller est posé à `starts_at` et le retour à
+`ends_at`. Un tennis de 17 h à 18 h produit donc un trajet « aller » à
+17 h — alors qu'à 17 h l'enfant doit être **arrivé**, pas partir.
+
+Ce n'est pas une amélioration souhaitable, c'est un défaut qui se verra
+au premier trajet du pilote. La proposition de Stéphane le corrige
+exactement : une marge d'arrivée avant le début, un délai de sortie
+après la fin, réglables, avec des valeurs par défaut par parent.
+
+Coût : deux colonnes sur l'activité, deux valeurs par défaut sur
+l'utilisateur, un décalage à la génération. **Une demi-journée, à faire
+avant le 2 novembre.**
+
+En revanche la **durée de trajet estimée** reste manuelle pour le
+pilote, comme il le propose. Un service d'itinéraires apporte une
+dépendance, un coût à l'appel et un transfert de données de
+localisation : à instruire séparément, avec l'AIPD.
+
+### N.3 Ce qui me paraît inutilement complexe
+
+**Les trois usages de hub — activité, proximité, chemin — ajoutent un
+axe qui en recoupe un autre.** Les hubs ont déjà un type : école, club,
+quartier, conservatoire, autre. « Proximité » et « quartier » disent la
+même chose. Une famille devra choisir deux fois, et nous devrons
+expliquer la différence.
+
+Plus fondamental : **un hub de chemin n'est pas un groupe, c'est une
+recherche.** Ce qui compte pour un parent n'est pas « sur quel axe
+suis-je inscrit », mais « ce trajet passe-t-il près de chez moi, dans
+le bon sens, à la bonne heure, avec une place ». Transformer cela en
+groupe à rejoindre oblige chaque famille à deviner quel axe la
+concerne, et à s'inscrire d'avance à une géographie.
+
+Recommandation : garder **un seul axe**, celui qui existe. Le besoin de
+proximité est déjà porté par le type « quartier ». Le besoin de chemin
+relève de la détection d'opportunités déjà prévue au schéma
+(`opportunity_matches`, en observation), pas d'un nouveau type de
+groupe. Cela retire une dimension entière des écrans, des filtres et
+des explications.
+
+**La préférence de détour et la comparaison de durées** supposent le
+service d'itinéraires. Accord manuel pour le pilote, comme proposé.
+
+**L'écran « Que souhaitez-vous faire ? »** (planche 1, écran 01) :
+ses deux réponses sont déjà les deux boutons de l'accueil livré le
+21/10. Un écran de plus pour poser une question dont les réponses sont
+affichées allonge le parcours.
+
+### N.4 Deux écarts à trancher, repérés dans les planches
+
+**Le pacte.** Planche 1, écran 06 : le pacte est accepté à
+l'inscription. Aujourd'hui il est accepté **par hub**, au moment de
+rejoindre, avec sa version (`hub_pact_acceptances`). Ce n'est pas un
+détail : un pacte global engage envers l'application, un pacte par hub
+engage envers un groupe de familles précis. Le second est plus fort et
+c'est celui qui est construit. À confirmer avant de changer.
+
+**Le numéro donné au responsable du hub.** Planche 2, écran 12 :
+« J'autorise l'administrateur à voir mon numéro ». C'est un cas
+différent de celui du conducteur (section M) : le responsable n'est pas
+une famille avec qui on partage un trajet. Même règle de fond, décision
+séparée.
+
+**La fiche publique du hub** (écran 11) affiche le point de rendez-vous
+avant adhésion. Acceptable pour « entrée du club ». À proscrire pour un
+hub de quartier, où ce libellé peut désigner une rue proche d'un
+domicile (voir L.3).
+
+### N.5 Quitter un hub : le risque est l'inverse de celui qu'ils craignent
+
+Vérifié : retirer une ligne de `hub_members` n'a **aucun effet** sur les
+trajets ni sur les demandes acceptées. Un trajet prévu n'est donc
+**jamais annulé silencieusement** — la crainte exprimée n'a pas lieu
+d'être.
+
+Mais l'inverse se produit : la famille qui quitte le hub **perd la vue**
+sur le trajet où son enfant est pourtant attendu, puisque sa visibilité
+passait par l'appartenance au hub. L'enfant reste inscrit, le trajet
+reste prévu, et le parent ne le voit plus. C'est le vrai sujet, et il
+mérite une règle explicite : au départ d'un hub, lister les trajets en
+cours et demander quoi en faire.
+
+### N.6 Le calendrier au centre : d'accord, et c'est déjà commencé
+
+La proposition de faire du calendrier le point de départ rejoint ce qui
+a été livré le 21/10 : l'accueil de la Semaine affiche désormais la
+prochaine étape, les demandes reçues et le trajet à organiser.
+
+Le parcours d'essai proposé — calendrier, chercher une place, envoyer la
+demande, réponse, calendrier actualisé — est le bon : c'est le seul qui
+traverse toute l'application. Le faire d'abord, mesurer, puis
+généraliser.
+
+Deux réserves déjà formulées valent ici : **une demande envoyée n'est
+pas un trajet obtenu**, et sans notification personne ne sait qu'on lui
+a répondu. Les trois états voulus (à couvrir, en attente, confirmé)
+existent déjà dans `trip_requests.status`.
+
+### N.7 Ordre proposé
+
+**Avant le pilote** : les marges horaires (défaut réel, une demi-journée)
+et le bouton coadministrateur (la colonne existe).
+
+**Juste après** : les notifications, qui commandent la messagerie,
+l'assistant et le calendrier vivant. Puis la recherche de hub (section
+L), puis la réponse du conducteur (section M).
+
+**Plus tard, après arbitrage** : le service d'itinéraires et les
+détours, le partage de numéro, le fil de discussion complet.
+
+**À ne pas faire** : le troisième axe de hub, et l'écran de question
+d'entrée.
