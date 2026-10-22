@@ -1043,3 +1043,99 @@ invitation, c'est le mode qu'on veut observer. La découverte prend son
 sens quand il y a des hubs à découvrir.
 
 À faire juste après, avec le réglage par défaut sur « sur invitation ».
+
+---
+
+## M. Échange entre le demandeur et le conducteur (Stéphane, 22/10/2026)
+
+Demande : un échange privé rattaché à la demande de place, un bouton
+« Échanger avant de répondre », l'accès maintenu après acceptation, un
+partage facultatif du téléphone, et des protections.
+
+### M.1 Ce qui existe déjà
+
+- **Une prise de contact en un coup existe.** `trip_requests.message`
+  est un texte libre que le demandeur joint à sa demande, et il
+  s'affiche côté conducteur. La moitié du besoin est là : ce qui manque,
+  c'est la **réponse**.
+- **Le signalement est prêt.** La table `reports` porte déjà
+  `category`, `body`, `target_user_id`, `trip_id` et surtout
+  `involves_minor` — le drapeau qui impose l'escalade humaine. On peut
+  signaler sans rien construire de nouveau.
+- **Le premier contact est détecté.** `trip_request_first_contact`
+  repère les demandes venant d'un foyer avec qui on n'a jamais partagé
+  de trajet. C'est exactement le moment où l'envie de se parler est la
+  plus forte.
+- **`users.phone` existe** et n'est exposé nulle part : les fonctions
+  de hub ne le renvoient jamais.
+
+### M.2 Ce qui manque, et le piège de la table `messages`
+
+La table `messages` existe mais **ne convient pas en l'état**. Ses
+canaux sont `cercle_intime` (mon foyer), `hub` (visible par **tout** le
+hub) et `broadcast_institutionnel`. Il n'y a **aucun canal à deux
+foyers**. Écrire dans le canal hub publierait la conversation devant
+tout le groupe, soit l'inverse exact de la demande. Elle contient
+d'ailleurs zéro ligne : elle n'est pas utilisée.
+
+Il faut donc une conversation **rattachée à la demande**, avec sa propre
+règle d'accès.
+
+### M.3 Trois points de fond
+
+**La conversation doit relier deux FOYERS, pas deux personnes.** Un
+foyer peut compter deux adultes. Si le fil appartient à la personne qui
+a cliqué, le conjoint ne voit rien, et peut redemander la même chose le
+lendemain. Le fil se rattache aux deux foyers, chaque message portant le
+prénom de son auteur. Cela ne coûte rien si c'est fait dès le départ, et
+c'est très coûteux à rattraper ensuite.
+
+**Sans notification, un fil de discussion est un piège.** Il n'existe
+aujourd'hui aucun moteur d'envoi (voir I.0). Un parent écrirait et
+attendrait une réponse que l'autre ne verra qu'en rouvrant
+l'application. Une conversation suppose que l'autre sache qu'on lui a
+parlé. C'est la même dépendance que pour l'assistant : la notification
+commande.
+
+**Une messagerie change la nature du traitement.** Héberger des
+conversations privées entre adultes amène des obligations propres :
+durée de conservation, modération, suite donnée aux signalements. Et
+surtout, les parents y écriront des prénoms d'enfants, des adresses et
+des horaires en texte libre. Conséquences directes : conservation
+courte et explicite, et ces messages ne partent **jamais** vers un
+service d'IA (même règle que les champs libres en J.1). Cela doit
+figurer dans l'AIPD, qui n'est pas validée.
+
+### M.4 Deux options
+
+**Option légère, pour le pilote — environ un jour.** Rendre symétrique
+ce qui existe : le conducteur peut répondre une fois à la demande, via
+un bouton « Répondre avant de décider » à côté d'Accepter et Refuser.
+La demande reste `en_attente` : **aucun nouveau statut n'est
+nécessaire**, la base le permet déjà. Deux messages au maximum, visibles
+des deux foyers, affichés dans la demande.
+
+Pourquoi c'est suffisant pour commencer : sans notification, un aller
+et un retour passent, un fil ne passe pas. Et le conducteur consulte sa
+demande de toute façon pour y répondre.
+
+**Option complète, après le pilote — trois à quatre jours.** Fil
+rattaché à la demande puis au trajet, blocage, purge programmée,
+partage volontaire du numéro avec confirmation et mention de
+conservation. À faire une fois les notifications en place.
+
+### M.5 Sur le partage du numéro
+
+Sa mention est juste : un numéro transmis peut être conservé, et le
+retirer de l'application ne le reprend pas. Mais il y a plus simple à
+constater : **un parent écrira son numéro dans le message**, qu'on
+construise la fonction ou non.
+
+Donc pour le pilote, ne pas construire le partage de numéro, et
+afficher sous la zone de saisie que ce qui est écrit là peut être
+conservé par son destinataire. Cela couvre le cas réel, sans promettre
+une maîtrise que nous n'avons pas.
+
+La règle des maquettes n'a pas besoin d'évoluer : les coordonnées
+restent privées par défaut, et l'application n'en transmet aucune. Ce
+qu'un parent écrit de lui-même lui appartient.
