@@ -1386,3 +1386,87 @@ Rien, et c'est le signe que l'ordre tient. La priorité reste :
 5. La carte, les détours, l'assistant vocal.
 
 Et toujours en préalable à de vraies familles : l'avis sur l'AIPD.
+
+---
+
+## P. Réponses du porteur du 28/10/2026
+
+Stéphane confirme la priorité aux notifications et tranche les deux
+questions ouvertes en O.4.
+
+### P.1 Notifications : une exigence précise à retenir
+
+« Bien distinguer une notification envoyée d'une information
+consultée. » Ce n'est pas une nuance de vocabulaire, c'est une
+contrainte de conception : une notification porte un état propre
+(envoyée, remise, lue), et **l'interface ne doit jamais présenter un
+envoi comme une lecture**. Un parent qui voit « prévenu » doit pouvoir
+s'y fier ; sinon il croira l'autre informé alors qu'il ne l'est pas.
+
+Même famille de règles que « demande envoyée n'est pas place obtenue ».
+
+### P.2 « Séparés si choisi » : le schéma y est déjà prêt
+
+Clarification : il ne s'agit **pas** d'empêcher deux enfants d'un même
+foyer de voyager ensemble. Le parent cherche deux places dans la même
+voiture, et peut, s'il le souhaite, autoriser deux solutions séparées.
+Chaque enfant garde alors sa confirmation et son suivi.
+
+Vérifié : `trip_requests.child_id` est unique et obligatoire — une
+demande porte déjà **un** enfant — et
+`trip_dropoff_confirmations` est également par enfant. La structure
+correspond donc déjà à ce qu'il décrit.
+
+Ce qui manque est plus léger que prévu :
+
+- **relier** deux demandes faites ensemble, pour savoir qu'elles
+  forment un même besoin ;
+- **l'affichage de l'état global** : une place obtenue sur deux ne doit
+  jamais s'afficher comme résolue. C'est le vrai point, et c'est une
+  règle d'interface avant d'être une règle de base.
+
+### P.3 « Adulte absent » : une règle de sécurité à inscrire
+
+Confirmé : alerte sur le téléphone, avec un accès direct pour appeler
+l'autre parent. Un message visible seulement dans l'application ne
+suffit pas — ce qui rattache ce point à la décision sur le partage de
+numéro (M.5).
+
+Et une règle que je verse aux règles du projet :
+
+> Si l'enfant est déjà avec le conducteur, il reste avec lui jusqu'à
+> une remise convenue. **Aucune remise ne peut être confirmée sans
+> avoir réellement eu lieu.**
+
+Conséquence technique directe : pas de confirmation anticipée, pas de
+confirmation en lot, pas de confirmation automatique à l'heure prévue.
+La confirmation reste un geste, enfant par enfant.
+
+### P.4 L'accord sur une série
+
+Maintenu, avec une distinction qu'il formule mieux que moi : **les
+dates peuvent exister sans que personne ne s'y soit engagé.** La
+génération automatique remplit le calendrier ; l'accord d'une autre
+famille est autre chose. Et il faut pouvoir gérer une exception
+ponctuelle dans une série acceptée.
+
+### P.5 Cadrage général
+
+Les 48 planches sont « le parcours cible et ses différentes
+situations, pas 48 étapes obligatoires ni autant de fonctionnalités à
+développer immédiatement ». La priorité reste la simplicité : reprendre
+ce qui est connu, montrer le prochain geste, rendre les statuts
+évidents.
+
+Et une phrase à garder telle quelle : **« Accepter un contact doit
+rester distinct d'accepter un transport. »** Elle valide la section M.
+
+### P.6 Protection des données : toujours en suspens
+
+Son message porte la mention « [À compléter avant envoi : état de
+l'analyse, personne chargée de la validation et éventuel délai
+connu.] ». Le paragraphe n'a pas été rempli.
+
+L'engagement est en revanche clair de sa part : tant que l'avis n'est
+pas obtenu, les essais restent sur des données fictives, sans vraies
+familles. **C'est donc le cadre du pilote jusqu'à nouvel ordre.**
