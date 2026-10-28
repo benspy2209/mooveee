@@ -700,3 +700,36 @@ Acceptation débloquée, message UI temporaire retiré (c4f39f2).
   notifications avec liens profonds (chantier C13).
   Reste du chantier K : rien d'engagé. Next : retour de Ben et de Steph
   à l'écran.
+- 28/10 — **MARGES HORAIRES ET COADMINISTRATEUR EN PROD** (commit
+  3853bab, poussé). Migration 0026 **appliquée par moi via le connecteur
+  Supabase** (Ben : « fais tout ») : colonnes `arrival_margin_min`,
+  `departure_delay_min`, `travel_minutes` sur `activities` +
+  `app_settings.trip_margins_default` (10/15/10), version 0026
+  enregistrée. ⚠ **Le rattrapage DÉCALE chaque occurrence**, il ne la
+  recalcule pas depuis l'activité : `starts_at` porte le créneau de
+  référence et la récurrence vient de `rrule` — recalculer depuis lui
+  ramenait toutes les occurrences d'une activité hebdomadaire à la même
+  date, et la 1re tentative a échoué sur
+  `trips_activity_occurrence_unique`. Trois gardes : pas de trajet avec
+  conducteur ou demande acceptée, jamais vers une heure déjà occupée,
+  rien si 0026 déjà enregistrée. Vérifié : Tennis 14 h → aller 13h35,
+  retour 15h10 ; un trajet déjà engagé n'a pas bougé.
+  Écran Activités : 3 champs + récapitulatif (départ conseillé, arrivée,
+  rendez-vous retour, retour estimé), calculé à l'affichage. Vérifié
+  dans Chrome sur le formulaire réel, y compris la mise à jour du récap.
+  Hubs : bouton coadministrateur (is_admin existait, seul le bouton
+  manquait ; un responsable ne change jamais son propre rôle).
+  Types régénérés à la main dans `src/types/database.ts` (⚠ le projet
+  n'a AUCUN script de génération de types).
+  ⚠ eslint : 9 erreurs préexistantes dans trips.ts, 3 dans hubs.tsx.
+  **WhatsApp de Steph lu le 28/10** : ses longs messages ne passent PAS
+  par WhatsApp (autre canal). Trois PDF y sont en attente, non lus :
+  `Mooveee_24_transitions_et_schema-1.pdf` (27 p., 43 Mo),
+  `Mooveee_mind_mapping_48_fleches_reliees.pdf` (1 p.),
+  `Mooveee_parcours_illustres_48_planches.pdf` (55 p., 27 Mo) — il est
+  passé de 12 à 48 planches. ⚠ Le téléchargement depuis WhatsApp Web
+  n'aboutit pas (menu Télécharger cliqué, rien dans ~/Downloads) : Ben
+  doit les enregistrer lui-même. ⚠ Reprendre WhatsApp Web déconnecte la
+  fenêtre que Ben avait ouverte.
+  Next : Ben télécharge les 3 PDF → évaluation ; pilote annoncé lundi
+  2/11.
