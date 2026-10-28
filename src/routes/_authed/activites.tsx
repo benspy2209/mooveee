@@ -2,7 +2,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
-import { DEFAULT_HORIZON_DAYS, generateTripsForHousehold } from '@/lib/trips'
+import {
+  DEFAULT_HORIZON_DAYS,
+  MARGES_PAR_DEFAUT,
+  generateTripsForHousehold,
+} from '@/lib/trips'
 import { PlaceField } from '@/components/PlaceField'
 
 import type { PlaceValue } from '@/components/PlaceField'
@@ -25,6 +29,9 @@ interface Activity {
   rrule: string | null
   starts_at: string | null
   ends_at: string | null
+  arrival_margin_min: number | null
+  departure_delay_min: number | null
+  travel_minutes: number | null
 }
 
 // Tranches de distance (arbitrage porteur, migration 0015) : un menu
@@ -64,6 +71,75 @@ function parseRruleDays(rrule: string): Array<string> {
     .slice('BYDAY='.length)
     .split(',')
     .filter((code) => WEEKDAYS.some((d) => d.code === code))
+}
+
+// Récapitulatif demandé par le porteur (22/10/2026) : le parent voit
+// l'heure à laquelle il doit partir, celle où l'enfant arrive, et
+// l'heure du rendez-vous de retour. Purement calculé à l'affichage,
+// rien n'est enregistré ici.
+function RecapHoraires({
+  startTime,
+  endTime,
+  arrivalMargin,
+  travelMinutes,
+  departureDelay,
+}: {
+  startTime: string
+  endTime: string
+  arrivalMargin: string
+  travelMinutes: string
+  departureDelay: string
+}) {
+  const debut = minutesDepuisMinuit(startTime)
+  const fin = minutesDepuisMinuit(endTime)
+  if (debut === null || fin === null) return null
+
+  const marge =
+    nombreOuNull(arrivalMargin) ?? MARGES_PAR_DEFAUT.arrival_margin_min
+  const trajet = nombreOuNull(travelMinutes) ?? MARGES_PAR_DEFAUT.travel_minutes
+  const sortie =
+    nombreOuNull(departureDelay) ?? MARGES_PAR_DEFAUT.departure_delay_min
+
+  return (
+    <dl className="mt-3 space-y-1 rounded-md bg-gray-50 p-3 text-sm text-gray-700">
+      <div className="flex justify-between gap-3">
+        <dt>Départ conseillé</dt>
+        <dd className="font-medium">{enHeure(debut - marge - trajet)}</dd>
+      </div>
+      <div className="flex justify-between gap-3">
+        <dt>Arrivée sur place</dt>
+        <dd className="font-medium">{enHeure(debut - marge)}</dd>
+      </div>
+      <div className="flex justify-between gap-3">
+        <dt>Rendez-vous pour repartir</dt>
+        <dd className="font-medium">{enHeure(fin + sortie)}</dd>
+      </div>
+      <div className="flex justify-between gap-3">
+        <dt>Retour estimé</dt>
+        <dd className="font-medium">{enHeure(fin + sortie + trajet)}</dd>
+      </div>
+    </dl>
+  )
+}
+
+function minutesDepuisMinuit(valeur: string): number | null {
+  const m = /^(\d{2}):(\d{2})$/.exec(valeur)
+  if (!m) return null
+  return Number(m[1]) * 60 + Number(m[2])
+}
+
+// Le calcul peut déborder d'un jour sur l'autre : on reste dans 0-24 h.
+function enHeure(minutes: number): string {
+  const borne = ((minutes % 1440) + 1440) % 1440
+  const hh = Math.floor(borne / 60)
+  const mm = borne % 60
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
+}
+
+// Champ de marge laissé vide = « valeur par défaut », pas « zéro ».
+function nombreOuNull(valeur: string): number | null {
+  const n = Number.parseInt(valeur, 10)
+  return Number.isFinite(n) && n >= 0 ? n : null
 }
 
 function toTimeInput(iso: string | null): string {
@@ -171,7 +247,7 @@ function ActivitesPage() {
       supabase
         .from('activities')
         .select(
-          'id, child_id, label, location_label, place_id, distance_band, rrule, starts_at, ends_at',
+          'id, child_id, label, location_label, place_id, distance_band, rrule, starts_at, ends_at, arrival_margin_min, departure_delay_min, travel_minutes',
         )
         .eq('household_id', membership.household_id)
         .order('created_at'),
@@ -541,6 +617,18 @@ function ActivityForm({
     toTimeInput(activity?.starts_at ?? null),
   )
   const [endTime, setEndTime] = useState(toTimeInput(activity?.ends_at ?? null))
+  // Marges horaires (0026) : l'enfant doit être arrivé AVANT le début et
+  // il faut du temps pour ressortir après la fin. Vides = valeurs par
+  // défaut de app_settings, appliquées à la génération des trajets.
+  const [arrivalMargin, setArrivalMargin] = useState(
+    activity?.arrival_margin_min?.toString() ?? '',
+  )
+  const [departureDelay, setDepartureDelay] = useState(
+    activity?.departure_delay_min?.toString() ?? '',
+  )
+  const [travelMinutes, setTravelMinutes] = useState(
+    activity?.travel_minutes?.toString() ?? '',
+  )
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -578,6 +666,9 @@ function ActivityForm({
       rrule: weekly ? buildRrule(days) : null,
       starts_at: combine(anchorDate, startTime).toISOString(),
       ends_at: combine(anchorDate, endTime).toISOString(),
+      arrival_margin_min: nombreOuNull(arrivalMargin),
+      departure_delay_min: nombreOuNull(departureDelay),
+      travel_minutes: nombreOuNull(travelMinutes),
     }
 
     setSubmitting(true)
@@ -810,6 +901,83 @@ function ActivityForm({
             className="mt-1 w-full field-lagoon px-3 py-2 text-sm"
           />
         </div>
+      </div>
+
+      {/* Marges horaires : l'heure de l'activité n'est pas l'heure du
+          trajet. Trois champs facultatifs ; vides, les valeurs par
+          défaut s'appliquent. La durée de trajet est saisie, aucun
+          service d'itinéraires n'est appelé. */}
+      <div>
+        <p className="text-sm font-medium text-gray-700">Horaires de trajet</p>
+        <p className="mt-0.5 text-sm text-gray-500">
+          Laissez vide pour les valeurs habituelles.
+        </p>
+        <div className="mt-2 flex flex-wrap gap-3">
+          <div className="min-w-[8rem] flex-1">
+            <label
+              htmlFor={`${idPrefix}-arrival`}
+              className="block text-xs text-gray-600"
+            >
+              Arriver combien de minutes avant
+            </label>
+            <input
+              id={`${idPrefix}-arrival`}
+              type="number"
+              min={0}
+              max={120}
+              inputMode="numeric"
+              placeholder="10"
+              value={arrivalMargin}
+              onChange={(e) => setArrivalMargin(e.target.value)}
+              className="field-lagoon mt-1 w-full px-3 py-2 text-sm"
+            />
+          </div>
+          <div className="min-w-[8rem] flex-1">
+            <label
+              htmlFor={`${idPrefix}-travel`}
+              className="block text-xs text-gray-600"
+            >
+              Durée du trajet, en minutes
+            </label>
+            <input
+              id={`${idPrefix}-travel`}
+              type="number"
+              min={0}
+              max={180}
+              inputMode="numeric"
+              placeholder="15"
+              value={travelMinutes}
+              onChange={(e) => setTravelMinutes(e.target.value)}
+              className="field-lagoon mt-1 w-full px-3 py-2 text-sm"
+            />
+          </div>
+          <div className="min-w-[8rem] flex-1">
+            <label
+              htmlFor={`${idPrefix}-departure`}
+              className="block text-xs text-gray-600"
+            >
+              Repartir combien de minutes après
+            </label>
+            <input
+              id={`${idPrefix}-departure`}
+              type="number"
+              min={0}
+              max={120}
+              inputMode="numeric"
+              placeholder="10"
+              value={departureDelay}
+              onChange={(e) => setDepartureDelay(e.target.value)}
+              className="field-lagoon mt-1 w-full px-3 py-2 text-sm"
+            />
+          </div>
+        </div>
+        <RecapHoraires
+          startTime={startTime}
+          endTime={endTime}
+          arrivalMargin={arrivalMargin}
+          travelMinutes={travelMinutes}
+          departureDelay={departureDelay}
+        />
       </div>
 
       {error && (

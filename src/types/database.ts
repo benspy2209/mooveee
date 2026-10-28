@@ -16,8 +16,10 @@ export type Database = {
     Tables: {
       activities: {
         Row: {
+          arrival_margin_min: number | null
           child_id: string
           created_at: string
+          departure_delay_min: number | null
           distance_band: Database["public"]["Enums"]["distance_band"]
           ends_at: string | null
           household_id: string
@@ -30,10 +32,13 @@ export type Database = {
           place_id: string | null
           rrule: string | null
           starts_at: string | null
+          travel_minutes: number | null
         }
         Insert: {
+          arrival_margin_min?: number | null
           child_id: string
           created_at?: string
+          departure_delay_min?: number | null
           distance_band?: Database["public"]["Enums"]["distance_band"]
           ends_at?: string | null
           household_id: string
@@ -46,10 +51,13 @@ export type Database = {
           place_id?: string | null
           rrule?: string | null
           starts_at?: string | null
+          travel_minutes?: number | null
         }
         Update: {
+          arrival_margin_min?: number | null
           child_id?: string
           created_at?: string
+          departure_delay_min?: number | null
           distance_band?: Database["public"]["Enums"]["distance_band"]
           ends_at?: string | null
           household_id?: string
@@ -62,6 +70,7 @@ export type Database = {
           place_id?: string | null
           rrule?: string | null
           starts_at?: string | null
+          travel_minutes?: number | null
         }
         Relationships: [
           {

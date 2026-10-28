@@ -132,6 +132,65 @@ interface ActivityForGeneration {
   rrule: string | null
   starts_at: string | null
   ends_at: string | null
+  arrival_margin_min: number | null
+  departure_delay_min: number | null
+  travel_minutes: number | null
+}
+
+// Marges horaires (0026). Le trajet n'est pas à l'heure de l'activité :
+// à l'aller l'enfant doit être ARRIVÉ avant le début, au retour il faut
+// le temps de sortir. Sans cela, un tennis de 17 h à 18 h produisait un
+// départ à 17 h (défaut relevé par le porteur le 22/10/2026).
+//
+// La durée de trajet est SAISIE par le parent, jamais calculée : aucun
+// service d'itinéraires n'est appelé, donc aucune donnée de
+// localisation ne quitte l'application.
+export interface MargesHoraires {
+  arrival_margin_min: number
+  departure_delay_min: number
+  travel_minutes: number
+}
+
+export const MARGES_PAR_DEFAUT: MargesHoraires = {
+  arrival_margin_min: 10,
+  departure_delay_min: 10,
+  travel_minutes: 15,
+}
+
+/** Heure de départ de l'aller : arriver avant le début de l'activité. */
+export function departAller(
+  debutActivite: Date,
+  marges: MargesHoraires,
+): Date {
+  return new Date(
+    debutActivite.getTime() -
+      (marges.arrival_margin_min + marges.travel_minutes) * 60_000,
+  )
+}
+
+/** Heure de départ du retour : laisser le temps de sortir. */
+export function departRetour(finActivite: Date, marges: MargesHoraires): Date {
+  return new Date(
+    finActivite.getTime() + marges.departure_delay_min * 60_000,
+  )
+}
+
+/** Marges d'une activité, complétées par les valeurs par défaut. */
+export function margesDe(
+  activity: {
+    arrival_margin_min: number | null
+    departure_delay_min: number | null
+    travel_minutes: number | null
+  },
+  defauts: MargesHoraires = MARGES_PAR_DEFAUT,
+): MargesHoraires {
+  return {
+    arrival_margin_min:
+      activity.arrival_margin_min ?? defauts.arrival_margin_min,
+    departure_delay_min:
+      activity.departure_delay_min ?? defauts.departure_delay_min,
+    travel_minutes: activity.travel_minutes ?? defauts.travel_minutes,
+  }
 }
 
 // Génère les trajets manquants du foyer sur l'horizon donné, rattache
@@ -155,7 +214,7 @@ export async function generateTripsForHousehold(
     supabase
       .from('activities')
       .select(
-        'id, child_id, label, location_label, place_id, distance_band, rrule, starts_at, ends_at',
+        'id, child_id, label, location_label, place_id, distance_band, rrule, starts_at, ends_at, arrival_margin_min, departure_delay_min, travel_minutes',
       )
       .eq('household_id', householdId),
     supabase
@@ -208,13 +267,13 @@ export async function generateTripsForHousehold(
     }> = [
       {
         direction: 'aller',
-        at: startsAt,
+        at: departAller(startsAt, margesDe(activity)),
         origin: HOME_LABEL,
         destination: place,
       },
       {
         direction: 'retour',
-        at: endsAt,
+        at: departRetour(endsAt, margesDe(activity)),
         origin: place,
         destination: HOME_LABEL,
       },

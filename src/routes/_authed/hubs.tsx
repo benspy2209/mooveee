@@ -894,6 +894,7 @@ function HubDetail({
             hubId={hubId}
             member={m}
             canRemove={isAdmin && m.user_id !== userId && !m.is_admin}
+            canChangeRole={isAdmin && m.user_id !== userId}
             onChanged={load}
           />
         ))}
@@ -1577,16 +1578,45 @@ function ValidatedMemberRow({
   hubId,
   member,
   canRemove,
+  canChangeRole,
   onChanged,
 }: {
   hubId: string
   member: HubMemberProfile
   canRemove: boolean
+  canChangeRole: boolean
   onChanged: () => void
 }) {
   const [confirming, setConfirming] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Coadministrateur : la colonne hub_members.is_admin et la policy
+  // hub_members_admin_update existent depuis l'étape 5 ; seul le bouton
+  // manquait. Un hub ne doit pas dépendre d'une seule personne (retour
+  // du porteur, 22/10/2026).
+  //
+  // Un responsable ne change jamais SON PROPRE rôle : sans cela, le
+  // dernier responsable d'un hub pourrait se démettre et laisser le
+  // groupe sans personne pour valider les arrivées.
+  async function setRole(isAdmin: boolean) {
+    setError(null)
+    setSubmitting(true)
+
+    const { error: updateError } = await supabase
+      .from('hub_members')
+      .update({ is_admin: isAdmin })
+      .eq('hub_id', hubId)
+      .eq('user_id', member.user_id)
+
+    if (updateError) {
+      setError(updateError.message)
+      setSubmitting(false)
+      return
+    }
+
+    onChanged()
+  }
 
   async function remove() {
     setError(null)
@@ -1614,6 +1644,16 @@ function ValidatedMemberRow({
         <span className="text-gray-900">{memberDisplayName(member)}</span>
         <div className="flex items-center gap-2">
           {member.is_admin && <span className="text-gray-500">Admin</span>}
+          {canChangeRole && !confirming && (
+            <button
+              type="button"
+              onClick={() => void setRole(!member.is_admin)}
+              disabled={submitting}
+              className="rounded-md border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {member.is_admin ? 'Retirer le rôle' : 'Nommer responsable'}
+            </button>
+          )}
           {canRemove && !confirming && (
             <button
               type="button"
