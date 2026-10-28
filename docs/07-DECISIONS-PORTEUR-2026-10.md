@@ -1287,3 +1287,102 @@ détours, le partage de numéro, le fil de discussion complet.
 
 **À ne pas faire** : le troisième axe de hub, et l'écran de question
 d'entrée.
+
+---
+
+## O. Le réseau des 48 flèches (Stéphane, 28/10/2026)
+
+Trois PDF reçus par WhatsApp le 28/10 au matin :
+`Mooveee_24_transitions_et_schema-1.pdf` (27 p.),
+`Mooveee_mind_mapping_48_fleches_reliees.pdf` (1 p.) et
+`Mooveee_parcours_illustres_48_planches.pdf` (55 p.). Le passage de 12 à
+48 planches.
+
+**Lu : le diagramme d'ensemble, en entier.** Les 55 planches de détail
+ne le sont pas ; le diagramme donne les 48 états et leurs transitions,
+c'est la structure.
+
+### O.1 Ce que le diagramme apporte
+
+Quatre phases : préparer et voir (01-12), rechercher et convenir
+(13-24), réaliser et réagir (25-36), modifier et répéter (37-48).
+
+Le chemin central : Calendrier → aller/retour/les deux → demande à
+vérifier → possibilités → zoom et choix du repère → fiche du trajet →
+demande de contact → contact accepté → départ et remise convenus →
+récapitulatif et accords → trajet confirmé → suivi du jour → enfant
+pris en charge → remise confirmée.
+
+**Le vrai progrès par rapport aux 12 planches, ce sont les branches
+d'échec**, qui manquaient : aucune possibilité, refus, attente sans
+réponse, annulation avant prise en charge, adulte absent au
+rendez-vous, retard déclaré, modification refusée. Un parcours ne vaut
+que par ce qu'il prévoit quand ça ne se passe pas bien ; cette version
+le fait.
+
+### O.2 Le constat qui saute aux yeux
+
+**« Suivi du jour et notifications » est le nœud le plus connecté du
+graphe.** Cinq flèches en partent ou y arrivent : présence au
+rendez-vous (28, 33), adulte absent (29), retard déclaré (32),
+annulation avant prise en charge (34). Toute la phase « réaliser et
+réagir » en dépend.
+
+Or ce moteur n'existe pas (voir I.0). C'est la troisième fois que la
+même pièce manquante ressort, par trois chemins différents : l'assistant
+(section I), l'échange entre parents (M), et maintenant le graphe
+complet. **Ce n'est pas une brique parmi d'autres, c'est le centre.**
+
+### O.3 État réel du chemin central
+
+| Étape du diagramme | État |
+| --- | --- |
+| Calendrier | existe (écran Semaine) |
+| Aller / retour / les deux | existe (direction du trajet) |
+| Demande à vérifier | existe (récapitulatif avant envoi) |
+| Possibilités · carte | **la liste existe, la carte non** |
+| Zoom et choix du repère | points de rendez-vous : existent ; le zoom non |
+| Fiche du trajet sélectionné | existe |
+| Demande de contact / contact accepté | **non** (section M) |
+| Départ et remise convenus | points de rendez-vous : existent |
+| Récapitulatif et accords | **non** |
+| Trajet confirmé | existe (`trip_requests.status`) |
+| Suivi du jour et notifications | **non, et bloque la suite** |
+| Enfant pris en charge / remise confirmée | existe (`trip_dropoff_confirmations`) |
+
+Huit étapes sur treize sont déjà là. Ce qui manque se concentre sur
+deux zones : **l'échange avant l'accord**, et **le jour du trajet**.
+
+### O.4 Trois nouveautés que les sections L à N ne couvraient pas
+
+**La proposition de série** (44, 45, 46). Proposer non pas un trajet
+mais une récurrence à une autre famille, avec une date unique ou une
+série future, et des accords à refaire si les modalités changent. C'est
+l'usage réel du covoiturage scolaire — personne ne renégocie chaque
+mercredi. Techniquement, les activités récurrentes existent déjà ; ce
+qui manque est l'accord qui porte sur la série et non sur l'occurrence.
+À instruire sérieusement, c'est peut-être le plus fort du lot.
+
+**Adulte absent et retard déclaré** (29, 32). Le jour du trajet, en
+situation. Suppose les notifications et, très probablement, le
+téléphone : on ne règle pas un enfant seul devant une école par un
+message dans une application. À traiter avec la décision sur le partage
+de numéro (section M.5).
+
+**« Séparés si choisi »** (48). Visiblement la possibilité de ne pas
+mettre deux enfants d'un même foyer dans le même trajet. Rien de tel
+n'existe aujourd'hui : `trip_children` ne porte aucune contrainte de ce
+genre. À confirmer avec Stéphane, le libellé seul ne suffit pas.
+
+### O.5 Ce que cela change à l'ordre proposé
+
+Rien, et c'est le signe que l'ordre tient. La priorité reste :
+
+1. **Les notifications.** Le graphe le démontre mieux que mes
+   arguments : sans elles, un tiers des 48 états est injouable.
+2. L'échange avant l'accord, puis le récapitulatif d'accords.
+3. La recherche de hub (section L).
+4. La proposition de série, à cadrer.
+5. La carte, les détours, l'assistant vocal.
+
+Et toujours en préalable à de vraies familles : l'avis sur l'AIPD.
