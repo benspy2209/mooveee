@@ -39,8 +39,17 @@ const STATUS_LABELS: Record<HubStatus, string> = {
 // pas accéder au hub.
 // ---------------------------------------------------------------------
 const PACT_VERSION = '1.0'
+// La première ligne change selon le geste : créer un hub et le
+// rejoindre ne sont pas la même chose, et le créateur en devient
+// responsable (retour du porteur, 30/10/2026). Les engagements
+// suivants sont identiques, la version du pacte aussi.
+const PACT_PREMIERE_LIGNE = {
+  rejoindre:
+    'Je rejoins ce hub pour organiser des trajets d’enfants dans un esprit d’entraide entre familles, sans contrepartie financière.',
+  creer:
+    'Je crée ce hub pour organiser des trajets d’enfants dans un esprit d’entraide entre familles, sans contrepartie financière. J’en deviens responsable : j’accepte ou je refuse les familles qui demandent à entrer, et je veille au respect de ce pacte.',
+}
 const PACT_TEXT = [
-  'Je rejoins ce hub pour organiser des trajets d’enfants dans un esprit d’entraide entre familles, sans contrepartie financière.',
   'Je m’engage à respecter les horaires convenus, à prévenir au plus tôt en cas d’imprévu, et à ne confier un enfant qu’aux adultes convenus.',
   'Je respecte les règles de sécurité en voiture : sièges et rehausseurs adaptés, ceinture pour chacun.',
   'Ce que j’apprends des familles du hub reste dans le hub : je ne partage ni coordonnées, ni informations sur les enfants à l’extérieur.',
@@ -480,9 +489,10 @@ function HubsPage() {
   )
 }
 
-function PactText() {
+function PactText({ geste = 'rejoindre' }: { geste?: 'rejoindre' | 'creer' }) {
   return (
     <ul className="mt-3 space-y-2 rounded-md bg-gray-50 p-4 text-sm text-gray-700">
+      <li>• {PACT_PREMIERE_LIGNE[geste]}</li>
       {PACT_TEXT.map((line, i) => (
         <li key={i}>• {line}</li>
       ))}
@@ -852,6 +862,21 @@ function HubDetail({
             ? ` — encore ${missing} pour activer le hub.`
             : ' — le seuil d’activation est atteint.')}
       </p>
+
+      {/* « En démarrage » ne disait pas ce qu'il implique, et un
+          responsable pouvait craindre une limitation. Il n'y en a
+          aucune : l'interdit 8 garantit toutes les fonctions dès le
+          premier jour (retour du porteur, 30/10/2026). */}
+      {hub.status === 'solo' && (
+        <p className="mt-2 text-sm text-gray-500">
+          « En démarrage » veut dire que le groupe compte encore peu de
+          familles. Rien n'est limité : vous pouvez dès maintenant publier des
+          trajets, offrir des places et en demander.
+          {isAdmin
+            ? ' La chose la plus utile à faire est d’inviter une famille avec le lien ci-dessous.'
+            : ''}
+        </p>
+      )}
 
       {isAdmin && (
         <ShareInvitation hubName={hub.name} joinCode={hub.join_code} />
@@ -2181,7 +2206,7 @@ function CreateHubForm({
             />
           </div>
 
-          <PactText />
+          <PactText geste="creer" />
           <label className="flex items-start gap-2 text-sm text-gray-700">
             <input
               type="checkbox"

@@ -16,8 +16,9 @@ import {
 } from '@/lib/trips'
 import { PlaceField } from '@/components/PlaceField'
 import { Accompagnement } from '@/components/Accompagnement'
+import { LIBELLE_STATUT, statutTrajet } from '@/lib/parcours'
 
-import type { EtatParcours } from '@/lib/parcours'
+import type { EtatParcours, StatutTrajet } from '@/lib/parcours'
 
 import type { FormEvent } from 'react'
 import type { PlaceValue } from '@/components/PlaceField'
@@ -115,6 +116,11 @@ function SemainePage() {
   const [nbActivites, setNbActivites] = useState(0)
   const [nbTrajetsTotal, setNbTrajetsTotal] = useState(0)
   const [nbDemandesRecues, setNbDemandesRecues] = useState(0)
+  // Demandes encore sans réponse, par trajet : sert à distinguer
+  // « aide demandée » de « en attente d'accord » (porteur, 30/10).
+  const [demandesParTrajet, setDemandesParTrajet] = useState<
+    Map<string, number>
+  >(new Map())
   const [trajetACouvrir, setTrajetACouvrir] = useState<{
     id: string
     scheduled_at: string
@@ -168,6 +174,7 @@ function SemainePage() {
       activitiesCountResult,
       tripsCountResult,
       requestsCountResult,
+      demandesParTrajetResult,
       aCouvrirResult,
     ] = await Promise.all([
       supabase
@@ -233,6 +240,11 @@ function SemainePage() {
       // Prochain trajet du foyer encore sans conducteur : c'est la
       // carte « retour à organiser » de l'accueil.
       supabase
+        .from('trip_requests')
+        .select('trip_id, trips!inner(household_id)')
+        .eq('trips.household_id', membership.household_id)
+        .eq('status', 'en_attente'),
+      supabase
         .from('trips')
         .select('id, scheduled_at, direction, activities(label)')
         .eq('household_id', membership.household_id)
@@ -271,6 +283,11 @@ function SemainePage() {
     setNbActivites(activitiesCountResult.count ?? 0)
     setNbTrajetsTotal(tripsCountResult.count ?? 0)
     setNbDemandesRecues(requestsCountResult.count ?? 0)
+    const parTrajet = new Map<string, number>()
+    for (const r of demandesParTrajetResult.data ?? []) {
+      parTrajet.set(r.trip_id, (parTrajet.get(r.trip_id) ?? 0) + 1)
+    }
+    setDemandesParTrajet(parTrajet)
     setTrajetACouvrir(
       aCouvrirResult.data
         ? {
@@ -377,6 +394,7 @@ function SemainePage() {
       prenom={profile?.first_name ?? null}
       nbDemandesRecues={nbDemandesRecues}
       trajetACouvrir={trajetACouvrir}
+      demandesParTrajet={demandesParTrajet}
       childrenList={childrenList}
       members={members}
       myHubs={myHubs}
@@ -404,6 +422,30 @@ function SemainePage() {
   )
 }
 
+// Pastille d'état du trajet. Chaque couleur porte son libellé : la
+// couleur seule ne doit jamais être la seule information (porteur,
+// 30/10, et accessibilité).
+const COULEUR_STATUT: Record<string, { fond: string; texte: string }> = {
+  annule: { fond: 'rgba(107, 114, 128, 0.14)', texte: '#4b5563' },
+  a_organiser: { fond: 'rgba(201, 138, 46, 0.14)', texte: '#8a5a12' },
+  je_conduis: { fond: 'rgba(47, 133, 128, 0.14)', texte: '#1f6b66' },
+  aide_demandee: { fond: 'rgba(59, 130, 246, 0.14)', texte: '#1d4ed8' },
+  attente_accord: { fond: 'rgba(139, 92, 246, 0.14)', texte: '#6d28d9' },
+  confirme: { fond: 'rgba(22, 163, 74, 0.14)', texte: '#15803d' },
+}
+
+function StatutPastille({ statut }: { statut: StatutTrajet }) {
+  const couleur = COULEUR_STATUT[statut]
+  return (
+    <span
+      className="rounded-full px-2.5 py-0.5 text-xs font-semibold"
+      style={{ background: couleur.fond, color: couleur.texte }}
+    >
+      {LIBELLE_STATUT[statut]}
+    </span>
+  )
+}
+
 function WeekScreen({
   userId,
   householdId,
@@ -411,6 +453,7 @@ function WeekScreen({
   prenom,
   nbDemandesRecues,
   trajetACouvrir,
+  demandesParTrajet,
   childrenList,
   members,
   myHubs,
@@ -434,6 +477,7 @@ function WeekScreen({
     direction: TripDirection
     label: string | null
   } | null
+  demandesParTrajet: Map<string, number>
   childrenList: Array<ChildOption>
   members: Array<Member>
   myHubs: Array<HubOption>
@@ -765,17 +809,17 @@ function WeekScreen({
                                 <span className="btn-ghost px-2.5 py-0.5 text-xs">
                                   {driver.users?.first_name ?? 'Conducteur'}
                                 </span>
-                              ) : (
-                                <span
-                                  className="rounded-full px-2.5 py-0.5 text-xs font-semibold"
-                                  style={{
-                                    background: 'rgba(201, 138, 46, 0.14)',
-                                    color: '#c98a2e',
-                                  }}
-                                >
-                                  À couvrir
-                                </span>
-                              )}
+                              ) : null}
+                              <StatutPastille
+                                statut={statutTrajet({
+                                  annule: cancelled,
+                                  conducteurId: trip.driver_id,
+                                  mesUserIds: members.map((m) => m.user_id),
+                                  publieAuHub: trip.published_to_hub,
+                                  demandesEnAttente:
+                                    demandesParTrajet.get(trip.id) ?? 0,
+                                })}
+                              />
                               {trip.published_to_hub && !cancelled && (
                                 <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
                                   Publié au hub

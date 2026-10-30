@@ -152,3 +152,61 @@ export function prochaineEtape(etat: EtatParcours): Etape {
 export function configurationIncomplete(etat: EtatParcours): boolean {
   return prochaineEtape(etat).cle !== 'pret'
 }
+
+// ---------------------------------------------------------------------
+// Statut d'un trajet, tel qu'il s'affiche dans la semaine.
+//
+// « À couvrir » disait trop peu : un parent ne savait pas s'il devait
+// agir, s'il avait déjà demandé de l'aide, ou s'il attendait une
+// réponse (retour du porteur, 30/10/2026). Cinq états explicites, dans
+// son vocabulaire.
+//
+// Règle tenue : « aide demandée » et « en attente d'accord » ne sont
+// PAS des solutions. Seul « confirmé » veut dire qu'un conducteur est
+// engagé.
+// ---------------------------------------------------------------------
+
+export type StatutTrajet =
+  | 'annule'
+  | 'a_organiser'
+  | 'je_conduis'
+  | 'aide_demandee'
+  | 'attente_accord'
+  | 'confirme'
+
+export interface EtatTrajet {
+  annule: boolean
+  /** Conducteur désigné, ou null. */
+  conducteurId: string | null
+  /** Identifiants des adultes de mon foyer. */
+  mesUserIds: Array<string>
+  publieAuHub: boolean
+  /** Demandes de place encore sans réponse sur ce trajet. */
+  demandesEnAttente: number
+}
+
+export function statutTrajet(etat: EtatTrajet): StatutTrajet {
+  if (etat.annule) return 'annule'
+
+  if (etat.conducteurId) {
+    return etat.mesUserIds.includes(etat.conducteurId)
+      ? 'je_conduis'
+      : 'confirme'
+  }
+
+  // Sans conducteur : ce que le parent a déjà entrepris prime sur
+  // l'absence de solution, sinon on lui redemande d'agir alors qu'il
+  // attend quelqu'un.
+  if (etat.demandesEnAttente > 0) return 'attente_accord'
+  if (etat.publieAuHub) return 'aide_demandee'
+  return 'a_organiser'
+}
+
+export const LIBELLE_STATUT: Record<StatutTrajet, string> = {
+  annule: 'Annulé',
+  a_organiser: 'À organiser',
+  je_conduis: 'Je conduis',
+  aide_demandee: 'Aide demandée',
+  attente_accord: 'En attente d’accord',
+  confirme: 'Confirmé',
+}
