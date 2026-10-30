@@ -273,8 +273,10 @@ tables.
 
 ## Confiance progressive
 
-Décision du porteur : les quatre niveaux du Doc1 §12.5 sont implémentés et
-**visibles** par les autres familles.
+Décision du porteur : les quatre niveaux du Doc1 §12.5 sont à implémenter
+et **visibles** par les autres familles. État au 30/10/2026 : rien n'est en
+base, aucune colonne de niveau ni de vérification n'existe. Les deux
+conditions ci-dessous s'appliqueront le jour où ce sera construit.
 
 Deux conditions non négociables :
 

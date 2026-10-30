@@ -1716,6 +1716,10 @@ function DropoffSection({ trip }: { trip: Trip }) {
   )
   const unconfirmed = aboard.filter((c) => !confirmedByChild.has(c.child_id))
   const scheduledMs = new Date(trip.scheduled_at).getTime()
+  // Règle du porteur : une remise ne se confirme pas avant d'avoir eu
+  // lieu. La base refuse l'insertion (policy dropoff_driver_insert) ;
+  // ici on explique au lieu d'offrir un bouton qui échouerait.
+  const commence = Date.now() >= scheduledMs
   const overdue =
     reminderMinutes !== null &&
     unconfirmed.length > 0 &&
@@ -1728,6 +1732,13 @@ function DropoffSection({ trip }: { trip: Trip }) {
         Confirmez le dépôt de chaque enfant à bord. Le parent de l’enfant voit
         la confirmation de son côté.
       </p>
+
+      {!commence && (
+        <p className="mt-2 text-xs text-gray-500">
+          Le trajet n’a pas encore commencé : le dépôt se confirme une fois
+          qu’il a eu lieu.
+        </p>
+      )}
 
       {overdue && (
         <p className="mt-2 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
@@ -1760,7 +1771,7 @@ function DropoffSection({ trip }: { trip: Trip }) {
                     Annuler
                   </button>
                 </span>
-              ) : (
+              ) : commence ? (
                 <button
                   type="button"
                   onClick={() => void confirmDropoff(child.child_id)}
@@ -1769,6 +1780,10 @@ function DropoffSection({ trip }: { trip: Trip }) {
                 >
                   Confirmer le dépôt
                 </button>
+              ) : (
+                <span className="text-xs text-gray-500">
+                  Après le trajet
+                </span>
               )}
             </li>
           )
